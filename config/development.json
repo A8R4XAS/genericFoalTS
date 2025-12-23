@@ -4,16 +4,5 @@
     "logger": {
       "format": "dev"
     }
-  },
-  "database": {
-    "type": "postgres",
-    "host": "localhost",
-    "port": 5432,
-    "username": "postgres",
-    "password": "postgres",
-    "database": "genericfoalts",
-    "synchronize": true,
-    "logging": true,
-    "dropSchema": false
   }
 }

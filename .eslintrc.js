@@ -43,7 +43,6 @@ module.exports = {
     '@typescript-eslint/no-non-null-assertion': 'off',
   },
   ignorePatterns: [
-    'src/migrations/*.ts',
-    'scripts/*.js'
+    'src/migrations/*.ts'
   ]
 };
