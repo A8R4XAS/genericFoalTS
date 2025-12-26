@@ -1,3 +1,19 @@
 {
-  
+  "database": {
+    "synchronize": false,
+    "logging": false,
+    "dropSchema": false,
+    "ssl": false,
+    "pool": {
+      "max": 20,
+      "min": 5,
+      "idleTimeout": 60000,
+      "connectionTimeout": 5000,
+      "maxLifetime": 1800000
+    },
+    "cache": {
+      "enabled": false,
+      "duration": 60000
+    }
+  }
 }

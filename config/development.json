@@ -14,6 +14,13 @@
     "database": "genericfoalts",
     "synchronize": true,
     "logging": true,
-    "dropSchema": false
+    "dropSchema": false,
+    "pool": {
+      "max": 10,
+      "min": 2,
+      "idleTimeout": 30000,
+      "connectionTimeout": 2000,
+      "maxLifetime": 600000
+    }
   }
 }
