@@ -7,6 +7,12 @@
   "database": {
     "database": "./e2e_db.sqlite3",
     "dropSchema": true,
-    "synchronize": true
+    "synchronize": true,
+    "pool": {
+      "max": 5,
+      "min": 1,
+      "idleTimeout": 10000,
+      "connectionTimeout": 2000
+    }
   }
 }
