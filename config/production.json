@@ -1,19 +1,30 @@
 {
   "database": {
+    "type": "env(DATABASE_TYPE)",
+    "host": "env(DATABASE_HOST)",
+    "port": "env(DATABASE_PORT)",
+    "username": "env(DATABASE_USERNAME)",
+    "password": "env(DATABASE_PASSWORD)",
+    "database": "env(DATABASE_NAME)",
     "synchronize": false,
     "logging": false,
     "dropSchema": false,
-    "ssl": false,
+    "ssl": "env(DATABASE_SSL)",
+    "extra": {
+      "ssl": {
+        "rejectUnauthorized": "env(DATABASE_SSL_REJECT_UNAUTHORIZED)"
+      }
+    },
     "pool": {
-      "max": 20,
-      "min": 5,
-      "idleTimeout": 60000,
+      "max": "env(DATABASE_POOL_MAX)",
+      "min": "env(DATABASE_POOL_MIN)",
+      "idleTimeout": "env(DATABASE_POOL_IDLE_TIMEOUT)",
       "connectionTimeout": 5000,
       "maxLifetime": 1800000
     },
     "cache": {
-      "enabled": false,
-      "duration": 60000
+      "enabled": "env(DATABASE_CACHE_ENABLED)",
+      "duration": "env(DATABASE_CACHE_DURATION)"
     }
   }
 }

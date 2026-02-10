@@ -1,13 +1,21 @@
+// Environment variables must be loaded BEFORE any other imports
+import 'dotenv/config';
 import 'source-map-support/register';
 
 // 3p
 import { Config, createApp, Logger, ServiceManager } from '@foal/core';
+
+// Validation
+import { validateEnv } from './config/env.validation';
 
 // App
 import { AppController } from './app/app.controller';
 import { dataSource } from './db';
 
 async function main() {
+  // Validate environment variables before anything else
+  validateEnv();
+  
   await dataSource.initialize();
 
   const serviceManager = new ServiceManager();
