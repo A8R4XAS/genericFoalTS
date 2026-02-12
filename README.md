@@ -215,6 +215,10 @@ genericFoalTS/
 │   │   ├── entities/      # TypeORM-Entities
 │   │   ├── hooks/         # FoalTS-Hooks
 │   │   └── services/      # Business-Logic-Services
+│   ├── middlewares/       # Custom Middleware (Best Practice)
+│   ├── utils/             # Helper-Funktionen
+│   ├── validators/        # Input-Validierungen
+│   ├── types/             # TypeScript-Typen
 │   ├── e2e/               # End-to-End-Tests
 │   ├── scripts/           # TypeScript-Scripts
 │   ├── db.ts              # TypeORM DataSource
