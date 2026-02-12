@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+
+# Build output
+build
+dist
+coverage
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Generated migrations
+src/migrations/*.ts
+
+# Scripts
+scripts/*.js

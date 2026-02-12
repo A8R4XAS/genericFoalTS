@@ -14,6 +14,11 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
   - [💻 Entwicklung](#-entwicklung)
     - [Development-Server starten](#development-server-starten)
     - [Hot Reload](#hot-reload)
+  - [🎨 Code-Qualität](#-code-qualität)
+    - [Linting](#linting)
+    - [Formatierung](#formatierung)
+    - [Pre-commit Hooks](#pre-commit-hooks)
+    - [VS Code Integration](#vs-code-integration)
   - [🧪 Testing](#-testing)
     - [Unit-Tests](#unit-tests)
     - [End-to-End Tests](#end-to-end-tests)
@@ -37,6 +42,8 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
 - **Testing** - Unit-Tests und E2E-Tests vorkonfiguriert
 - **Hot Reload** - Automatisches Neuladen während der Entwicklung
 - **Linting** - ESLint-Integration für Code-Qualität
+- **Prettier** - Automatische Code-Formatierung
+- **Pre-commit Hooks** - Automatische Qualitätsprüfung vor jedem Commit
 
 ## 🛠 Technologie-Stack
 
@@ -46,7 +53,8 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
 - **Datenbank**: PostgreSQL
 - **ORM**: TypeORM 0.3.27
 - **Testing**: Mocha, SuperTest
-- **Code-Qualität**: ESLint
+- **Code-Qualität**: ESLint, Prettier
+- **Git Hooks**: Husky, lint-staged
 
 ## 📦 Voraussetzungen
 
@@ -122,6 +130,47 @@ Die Anwendung läuft standardmäßig auf `http://localhost:3001`.
 ### Hot Reload
 
 Der Development-Server beobachtet automatisch Änderungen an TypeScript-Dateien und kompiliert/startet die Anwendung neu.
+
+## 🎨 Code-Qualität
+
+Dieses Projekt verwendet ESLint und Prettier für konsistente Code-Qualität und -Formatierung.
+
+### Linting
+
+```bash
+# Code auf Fehler prüfen
+npm run lint
+
+# Code-Probleme automatisch beheben
+npm run lint:fix
+```
+
+### Formatierung
+
+```bash
+# Code formatieren
+npm run format
+
+# Formatierung prüfen (ohne Änderungen)
+npm run format:check
+```
+
+### Pre-commit Hooks
+
+Husky führt automatisch vor jedem Commit folgende Aktionen aus:
+- ESLint prüft und behebt Fehler in geänderten TypeScript-Dateien
+- Prettier formatiert geänderte Dateien
+
+Commits mit Linting-Fehlern werden automatisch verhindert.
+
+### VS Code Integration
+
+Das Projekt enthält empfohlene VS Code-Einstellungen (`.vscode/settings.json`):
+- Automatisches Formatieren beim Speichern
+- ESLint-Integration mit automatischer Fehlerkorrektur
+- Empfohlene Extensions (ESLint, Prettier)
+
+Installiere die empfohlenen Extensions für die beste Entwicklungserfahrung.
 
 ## 🧪 Testing
 
@@ -241,6 +290,8 @@ genericFoalTS/
 | `npm run e2e` | E2E-Tests im Watch-Mode |
 | `npm run lint` | Code mit ESLint prüfen |
 | `npm run lint:fix` | Code-Probleme automatisch beheben |
+| `npm run format` | Code mit Prettier formatieren |
+| `npm run format:check` | Formatierung prüfen |
 | `npm run makemigrations` | Neue Datenbank-Migration erstellen |
 | `npm run migrations` | Migrationen ausführen |
 | `npm run revertmigration` | Letzte Migration zurückrollen |

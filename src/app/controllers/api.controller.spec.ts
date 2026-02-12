@@ -8,9 +8,7 @@ import { Context, createController, getHttpMethod, getPath, isHttpResponseOK } f
 import { ApiController } from './api.controller';
 
 describe('ApiController', () => {
-
   describe('has a "index" method that', () => {
-
     it('should handle requests at GET /.', () => {
       strictEqual(getHttpMethod(ApiController, 'index'), 'GET');
       strictEqual(getPath(ApiController, 'index'), '/');
@@ -28,7 +26,5 @@ describe('ApiController', () => {
 
       strictEqual(response.body, 'Hello world!');
     });
-
   });
-
 });
