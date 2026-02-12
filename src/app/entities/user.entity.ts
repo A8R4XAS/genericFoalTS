@@ -1,5 +1,8 @@
+import { PasswordService } from '@foal/core';
 import {
   BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
@@ -46,4 +49,19 @@ export class User extends BaseEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async hashPassword() {
+    if (!this.password || isPbkdf2Hash(this.password)) {
+      return;
+    }
+
+    const passwordService = new PasswordService();
+    this.password = await passwordService.hashPassword(this.password);
+  }
+}
+
+function isPbkdf2Hash(value: string): boolean {
+  return value.startsWith('pbkdf2_');
 }
