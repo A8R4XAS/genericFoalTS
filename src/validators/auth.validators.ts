@@ -4,7 +4,7 @@ import { z } from 'zod';
  * Validation schema for user registration
  */
 export const registerSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email format').toLowerCase().trim(),
+  email: z.string().min(1, 'Email is required').trim().toLowerCase().email('Invalid email format'),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters long')

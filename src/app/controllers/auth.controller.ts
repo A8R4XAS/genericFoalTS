@@ -42,6 +42,7 @@ export class AuthController {
 
       // Generate verification token (32 bytes = 64 hex characters)
       const verificationToken = randomBytes(32).toString('hex');
+      user.verificationToken = verificationToken;
 
       // Save user to database
       await user.save();
