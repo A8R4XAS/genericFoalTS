@@ -15,7 +15,7 @@ import { dataSource } from './db';
 async function main() {
   // Validate environment variables before anything else
   validateEnv();
-  
+
   await dataSource.initialize();
 
   const serviceManager = new ServiceManager();
@@ -27,5 +27,7 @@ async function main() {
   app.listen(port, () => logger.info(`Listening on port ${port}...`));
 }
 
-main()
-  .catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

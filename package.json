@@ -16,6 +16,8 @@
     "e2e": "npm run build:e2e && concurrently -r \"tsc -p tsconfig.e2e.json -w\" \"mocha --file ./build/e2e.js -w \\\"./build/e2e/**/*.js\\\"\"",
     "lint": "eslint --ext ts src",
     "lint:fix": "eslint --ext ts --fix src",
+    "format": "prettier --write \"src/**/*.ts\" \"config/**/*.{js,json,yml}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"config/**/*.{js,json,yml}\"",
     "makemigrations": "npx foal rmdir build && tsc -p tsconfig.app.json && npx typeorm migration:generate src/migrations/migration -d build/db -p && tsc -p tsconfig.app.json",
     "migrations": "npx typeorm migration:run -d build/db",
     "revertmigration": "npx typeorm migration:revert -d build/db",
@@ -25,7 +27,8 @@
     "db:restart": "npm run db restart",
     "db:status": "npm run db status",
     "db:logs": "npm run db logs",
-    "backendDev": "npm run db:start && npm run dev"
+    "backendDev": "npm run db:start && npm run dev",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -47,9 +50,23 @@
     "@typescript-eslint/parser": "~6.5.0",
     "concurrently": "~9.1.2",
     "eslint": "~8.48.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "mocha": "~11.7.5",
+    "prettier": "^3.8.1",
     "supertest": "~7.1.4",
     "supervisor": "~0.12.0",
     "typescript": "~5.5.4"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

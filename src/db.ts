@@ -10,7 +10,7 @@ import { DataSource, DataSourceOptions } from 'typeorm';
  */
 export function createDataSource(): DataSource {
   const env = process.env.NODE_ENV || 'development';
-  
+
   const options: DataSourceOptions = {
     type: Config.getOrThrow('database.type', 'string') as any,
 
@@ -50,7 +50,7 @@ export function createDataSource(): DataSource {
     logger: 'advanced-console',
 
     // SSL für Produktion (falls benötigt)
-    ssl: Config.get('database.ssl', 'boolean', false) 
+    ssl: Config.get('database.ssl', 'boolean', false)
       ? { rejectUnauthorized: Config.get('database.ssl.rejectUnauthorized', 'boolean', false) }
       : false,
 
@@ -72,7 +72,9 @@ export function createDataSource(): DataSource {
  * - test: Nur Fehler
  * - production: Fehler und Warnungen
  */
-function getLoggingLevel(env: string): boolean | 'all' | ('query' | 'schema' | 'error' | 'warn' | 'info' | 'log' | 'migration') [] {
+function getLoggingLevel(
+  env: string
+): boolean | 'all' | ('query' | 'schema' | 'error' | 'warn' | 'info' | 'log' | 'migration')[] {
   switch (env) {
     case 'development':
       return ['query', 'error', 'warn', 'migration', 'schema'];
