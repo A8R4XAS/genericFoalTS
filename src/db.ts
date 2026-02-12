@@ -1,3 +1,5 @@
+// Environment variables must be loaded BEFORE any other imports
+import 'dotenv/config';
 
 import { Config } from '@foal/core';
 import { DataSource, DataSourceOptions } from 'typeorm';
