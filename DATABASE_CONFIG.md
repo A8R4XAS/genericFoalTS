@@ -8,10 +8,10 @@ Die TypeORM DataSource-Konfiguration unterstützt verschiedene Umgebungen (devel
 
 Die Datenbank-Konfiguration befindet sich in den folgenden Dateien:
 
-- `config/default.json` - Basis-Konfiguration (SQLite für lokale Entwicklung)
+- `config/default.json` - Basis-Konfiguration (PostgreSQL via Umgebungsvariablen)
 - `config/development.json` - Entwicklungsumgebung (PostgreSQL)
-- `config/test.json` - Testumgebung (SQLite)
-- `config/e2e.json` - End-to-End-Tests (SQLite)
+- `config/test.json` - Testumgebung (PostgreSQL, separate Testdatenbank)
+- `config/e2e.json` - End-to-End-Tests (PostgreSQL, separate E2E-Datenbank)
 - `config/production.json` - Produktionsumgebung
 
 ## Umgebungsvariablen
@@ -26,6 +26,8 @@ DATABASE_PORT=5432
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_NAME=genericfoalts
+DATABASE_NAME_TEST=genericfoalts_test
+DATABASE_NAME_E2E=genericfoalts_e2e
 ```
 
 ## Connection Pooling
