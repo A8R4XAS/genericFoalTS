@@ -6,7 +6,11 @@
     }
   },
   "database": {
-    "type": "sqlite",
-    "database": "./db.sqlite3"
+    "type": "env(DATABASE_TYPE)",
+    "host": "env(DATABASE_HOST)",
+    "port": "env(DATABASE_PORT)",
+    "username": "env(DATABASE_USERNAME)",
+    "password": "env(DATABASE_PASSWORD)",
+    "database": "env(DATABASE_NAME)"
   }
 }

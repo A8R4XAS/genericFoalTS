@@ -5,7 +5,7 @@
     }
   },
   "database": {
-    "database": "./e2e_db.sqlite3",
+    "database": "env(DATABASE_NAME_E2E)",
     "dropSchema": true,
     "synchronize": true,
     "pool": {
