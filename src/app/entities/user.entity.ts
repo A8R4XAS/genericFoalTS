@@ -44,6 +44,9 @@ export class User extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   isVerified: boolean;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  verificationToken: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
