@@ -1,6 +1,11 @@
 {
   "database": {
-    "database": "./test_db.sqlite3",
+    "type": "postgres",
+    "host": "localhost",
+    "port": 5432,
+    "username": "postgres",
+    "password": "postgres",
+    "database": "genericfoalts_test",
     "dropSchema": true,
     "synchronize": true,
     "pool": {
