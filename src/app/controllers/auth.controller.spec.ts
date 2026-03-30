@@ -10,7 +10,10 @@ import {
   isHttpResponseCreated,
   isHttpResponseConflict,
   isHttpResponseBadRequest,
+  isHttpResponseOK,
+  isHttpResponseUnauthorized,
 } from '@foal/core';
+import * as jwt from 'jsonwebtoken';
 
 // App
 import { AuthController } from './auth.controller';
@@ -191,6 +194,158 @@ describe('AuthController', () => {
       });
 
       const response = await controller.register(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+  });
+
+  describe('has a "login" method that', () => {
+    it('should handle requests at POST /login.', () => {
+      strictEqual(getHttpMethod(AuthController, 'login'), 'POST');
+      strictEqual(getPath(AuthController, 'login'), '/login');
+    });
+
+    it('should return JWT tokens for valid credentials.', async () => {
+      // Create a user first
+      const user = new User();
+      user.email = 'login@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Login';
+      user.lastName = 'User';
+      await user.save();
+
+      const ctx = new Context({
+        body: { email: 'login@example.com', password: 'Password123' },
+      });
+
+      const response = await controller.login(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      ok(body.accessToken, 'Should return an access token');
+      ok(body.refreshToken, 'Should return a refresh token');
+      strictEqual(body.tokenType, 'Bearer');
+
+      // Verify the token is valid and contains the expected payload
+      const decoded = jwt.decode(body.accessToken) as jwt.JwtPayload;
+      strictEqual(decoded['userId'], user.id);
+      strictEqual(decoded['role'], user.role);
+    });
+
+    it('should reject login with incorrect password.', async () => {
+      const user = new User();
+      user.email = 'wrongpass@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Wrong';
+      user.lastName = 'Pass';
+      await user.save();
+
+      const ctx = new Context({
+        body: { email: 'wrongpass@example.com', password: 'WrongPassword1' },
+      });
+
+      const response = await controller.login(ctx);
+
+      if (!isHttpResponseUnauthorized(response)) {
+        throw new Error('The response should be an instance of HttpResponseUnauthorized.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid credentials');
+    });
+
+    it('should reject login for non-existent user.', async () => {
+      const ctx = new Context({
+        body: { email: 'nobody@example.com', password: 'Password123' },
+      });
+
+      const response = await controller.login(ctx);
+
+      if (!isHttpResponseUnauthorized(response)) {
+        throw new Error('The response should be an instance of HttpResponseUnauthorized.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid credentials');
+    });
+
+    it('should reject login with missing credentials.', async () => {
+      const ctx = new Context({ body: {} });
+
+      const response = await controller.login(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+  });
+
+  describe('has a "refresh" method that', () => {
+    it('should handle requests at POST /refresh.', () => {
+      strictEqual(getHttpMethod(AuthController, 'refresh'), 'POST');
+      strictEqual(getPath(AuthController, 'refresh'), '/refresh');
+    });
+
+    it('should issue a new access token from a valid refresh token.', async () => {
+      const user = new User();
+      user.email = 'refresh@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Refresh';
+      user.lastName = 'User';
+      await user.save();
+
+      // Get a refresh token by logging in first
+      const loginCtx = new Context({
+        body: { email: 'refresh@example.com', password: 'Password123' },
+      });
+      const loginResponse = await controller.login(loginCtx);
+
+      if (!isHttpResponseOK(loginResponse)) {
+        throw new Error('Login should succeed.');
+      }
+
+      const { refreshToken } = loginResponse.body as any;
+
+      const refreshCtx = new Context({ body: { refreshToken } });
+      const response = await controller.refresh(refreshCtx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      ok(body.accessToken, 'Should return a new access token');
+      strictEqual(body.tokenType, 'Bearer');
+    });
+
+    it('should reject an invalid refresh token.', async () => {
+      const ctx = new Context({ body: { refreshToken: 'invalid.token.here' } });
+
+      const response = await controller.refresh(ctx);
+
+      if (!isHttpResponseUnauthorized(response)) {
+        throw new Error('The response should be an instance of HttpResponseUnauthorized.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid or expired refresh token');
+    });
+
+    it('should reject a missing refresh token.', async () => {
+      const ctx = new Context({ body: {} });
+
+      const response = await controller.refresh(ctx);
 
       if (!isHttpResponseBadRequest(response)) {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
