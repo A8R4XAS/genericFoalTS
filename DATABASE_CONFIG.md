@@ -8,10 +8,10 @@ Die TypeORM DataSource-Konfiguration unterstützt verschiedene Umgebungen (devel
 
 Die Datenbank-Konfiguration befindet sich in den folgenden Dateien:
 
-- `config/default.json` - Basis-Konfiguration (SQLite für lokale Entwicklung)
+- `config/default.json` - Basis-Konfiguration (PostgreSQL)
 - `config/development.json` - Entwicklungsumgebung (PostgreSQL)
-- `config/test.json` - Testumgebung (SQLite)
-- `config/e2e.json` - End-to-End-Tests (SQLite)
+- `config/test.json` - Testumgebung (PostgreSQL)
+- `config/e2e.json` - End-to-End-Tests (PostgreSQL)
 - `config/production.json` - Produktionsumgebung
 
 ## Umgebungsvariablen
@@ -31,6 +31,7 @@ DATABASE_NAME=genericfoalts
 ## Connection Pooling
 
 ### Development
+
 - **Max Connections**: 10
 - **Min Connections**: 2
 - **Idle Timeout**: 30000ms (30 Sekunden)
@@ -38,12 +39,14 @@ DATABASE_NAME=genericfoalts
 - **Max Lifetime**: 600000ms (10 Minuten)
 
 ### Test / E2E
+
 - **Max Connections**: 5
 - **Min Connections**: 1
 - **Idle Timeout**: 10000ms (10 Sekunden)
 - **Connection Timeout**: 2000ms (2 Sekunden)
 
 ### Production
+
 - **Max Connections**: 20
 - **Min Connections**: 5
 - **Idle Timeout**: 60000ms (60 Sekunden)
@@ -55,21 +58,27 @@ DATABASE_NAME=genericfoalts
 Die Logging-Konfiguration passt sich automatisch an die Umgebung an:
 
 ### Development
+
 ```typescript
-['query', 'error', 'warn', 'migration', 'schema']
+['query', 'error', 'warn', 'migration', 'schema'];
 ```
+
 Zeigt SQL-Queries, Fehler, Warnungen, Migrations und Schema-Änderungen.
 
 ### Test
+
 ```typescript
-['error']
+['error'];
 ```
+
 Zeigt nur Fehler, um die Test-Ausgabe übersichtlich zu halten.
 
 ### Production
+
 ```typescript
-['error', 'warn']
+['error', 'warn'];
 ```
+
 Zeigt nur Fehler und Warnungen für Performance-Optimierung.
 
 ## Synchronize-Option
@@ -111,16 +120,19 @@ Optional kann Query-Caching aktiviert werden:
 ## Migrations
 
 ### Migration erstellen
+
 ```bash
 npm run makemigrations
 ```
 
 ### Migrations ausführen
+
 ```bash
 npm run migrations
 ```
 
 ### Migration rückgängig machen
+
 ```bash
 npm run revertmigration
 ```
@@ -128,31 +140,37 @@ npm run revertmigration
 ## Datenbank-Skripte
 
 ### Datenbank starten (Docker)
+
 ```bash
 npm run db:start
 ```
 
 ### Datenbank stoppen
+
 ```bash
 npm run db:stop
 ```
 
 ### Datenbank neu starten
+
 ```bash
 npm run db:restart
 ```
 
 ### Datenbank-Status prüfen
+
 ```bash
 npm run db:status
 ```
 
 ### Datenbank-Logs anzeigen
+
 ```bash
 npm run db:logs
 ```
 
 ### Backend mit Datenbank starten
+
 ```bash
 npm run backendDev
 ```
@@ -171,16 +189,19 @@ Die Anwendung sollte erfolgreich starten und eine Verbindung zur Datenbank herst
 ## Fehlerbehebung
 
 ### Verbindungsfehler
+
 - Prüfen Sie, ob PostgreSQL läuft: `npm run db:status`
 - Überprüfen Sie die Credentials in `.env`
 - Stellen Sie sicher, dass die Datenbank existiert
 
 ### Migration-Fehler
+
 - Bauen Sie das Projekt neu: `npm run build`
 - Prüfen Sie die Migration-Dateien in `src/migrations/`
 - Stellen Sie sicher, dass die Datenbank erreichbar ist
 
 ### Pool-Fehler
+
 - Reduzieren Sie `max` Connections in der Config
 - Erhöhen Sie `connectionTimeout` für langsame Verbindungen
 - Prüfen Sie die Netzwerkverbindung zur Datenbank
