@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@foal/core": "^5.0.0",
+    "@foal/jwt": "^5.2.1",
     "@foal/typeorm": "^5.2.1",
     "@types/jsonwebtoken": "^9.0.10",
     "dotenv": "^16.4.7",
