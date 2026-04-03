@@ -8,5 +8,10 @@
   "database": {
     "type": "sqlite",
     "database": "./db.sqlite3"
+  },
+  "jwt": {
+    "secret": "env(JWT_SECRET)",
+    "accessTokenExpiresIn": "15m",
+    "refreshTokenExpiresIn": "7d"
   }
 }

@@ -19,5 +19,8 @@
       "idleTimeout": 10000,
       "connectionTimeout": 2000
     }
+  },
+  "jwt": {
+    "secret": "e2e-jwt-secret-not-for-production"
   }
 }
