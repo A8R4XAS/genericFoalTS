@@ -8,6 +8,7 @@ import {
   HttpResponseUnauthorized,
   PasswordService,
   Post,
+  dependency,
 } from '@foal/core';
 import { ZodError } from 'zod';
 import { randomBytes } from 'crypto';
@@ -16,6 +17,9 @@ import { User } from '../entities';
 import { loginSchema, refreshTokenSchema, registerSchema } from '../../validators';
 
 export class AuthController {
+  @dependency
+  passwordService: PasswordService;
+
   /**
    * POST /api/auth/register
    * Register a new user with email, password, firstName, and lastName
@@ -88,14 +92,13 @@ export class AuthController {
     try {
       const validatedData = loginSchema.parse(ctx.request.body);
 
-      const user = await User.findOne({ where: { email: validatedData.email } });
+      const user = await User.findOneBy({ email: validatedData.email });
 
       if (!user) {
         return new HttpResponseUnauthorized({ error: 'Invalid credentials' });
       }
 
-      const passwordService = new PasswordService();
-      const passwordValid = await passwordService.verifyPassword(
+      const passwordValid = await this.passwordService.verifyPassword(
         validatedData.password,
         user.password
       );
@@ -108,7 +111,7 @@ export class AuthController {
       const accessExpiresIn = Config.get('jwt.accessTokenExpiresIn', 'string', '15m');
       const refreshExpiresIn = Config.get('jwt.refreshTokenExpiresIn', 'string', '7d');
 
-      const payload = { userId: user.id, role: user.role };
+      const payload = { sub: user.id.toString(), userId: user.id, role: user.role };
 
       const accessToken = jwt.sign(payload, secret, {
         expiresIn: accessExpiresIn,
@@ -162,7 +165,7 @@ export class AuthController {
         return new HttpResponseUnauthorized({ error: 'Invalid or expired refresh token' });
       }
 
-      const payload = { userId: user.id, role: user.role };
+      const payload = { sub: user.id.toString(), userId: user.id, role: user.role };
       const accessToken = jwt.sign(payload, secret, {
         expiresIn: accessExpiresIn,
       } as jwt.SignOptions);
