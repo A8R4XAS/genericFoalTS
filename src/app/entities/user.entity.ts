@@ -11,6 +11,8 @@ import {
 } from 'typeorm';
 import { PasswordHashingService } from '../services';
 
+const passwordHashingService = new PasswordHashingService();
+
 export enum UserRole {
   USER = 'user',
   ADMIN = 'admin',
@@ -60,7 +62,6 @@ export class User extends BaseEntity {
       return;
     }
 
-    const service = new PasswordHashingService();
-    this.password = await service.hash(this.password);
+    this.password = await passwordHashingService.hash(this.password);
   }
 }
