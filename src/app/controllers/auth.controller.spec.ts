@@ -38,6 +38,7 @@ describe('AuthController', () => {
     // Stub the email service to avoid real sends during tests
     controller.emailService = {
       sendVerificationEmail: async () => {},
+      sendPasswordResetEmail: async () => {},
     } as EmailService;
     // Clean up users table before each test
     await User.clear();
@@ -332,6 +333,7 @@ describe('AuthController', () => {
         sendVerificationEmail: async (email: string) => {
           emailSentTo = email;
         },
+        sendPasswordResetEmail: async () => {},
       } as EmailService;
 
       const ctx = new Context({ body: { email: 'resend@example.com' } });
@@ -367,6 +369,7 @@ describe('AuthController', () => {
         sendVerificationEmail: async () => {
           emailSent = true;
         },
+        sendPasswordResetEmail: async () => {},
       } as EmailService;
 
       const ctx = new Context({ body: { email: 'verified@example.com' } });
@@ -385,6 +388,7 @@ describe('AuthController', () => {
         sendVerificationEmail: async () => {
           emailSent = true;
         },
+        sendPasswordResetEmail: async () => {},
       } as EmailService;
 
       const ctx = new Context({ body: { email: 'nobody@example.com' } });
@@ -552,6 +556,209 @@ describe('AuthController', () => {
       const ctx = new Context({ body: {} });
 
       const response = await controller.refresh(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+  });
+
+  describe('has a "forgotPassword" method that', () => {
+    it('should handle requests at POST /forgot-password.', () => {
+      strictEqual(getHttpMethod(AuthController, 'forgotPassword'), 'POST');
+      strictEqual(getPath(AuthController, 'forgotPassword'), '/forgot-password');
+    });
+
+    it('should generate a reset token and send a reset email for a registered user.', async () => {
+      const user = new User();
+      user.email = 'resetme@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Reset';
+      user.lastName = 'Me';
+      await user.save();
+
+      let emailSentTo = '';
+      let emailToken = '';
+      controller.emailService = {
+        sendVerificationEmail: async () => {},
+        sendPasswordResetEmail: async (email: string, token: string) => {
+          emailSentTo = email;
+          emailToken = token;
+        },
+      } as EmailService;
+
+      const ctx = new Context({ body: { email: 'resetme@example.com' } });
+      const response = await controller.forgotPassword(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      strictEqual(
+        body.message,
+        'If this email is registered, a password reset email has been sent'
+      );
+      strictEqual(emailSentTo, 'resetme@example.com');
+      ok(emailToken, 'Reset token should be passed to the email service');
+
+      const updatedUser = await User.findOne({ where: { email: 'resetme@example.com' } });
+      ok(updatedUser?.resetPasswordToken, 'User should have a reset token');
+      ok(updatedUser?.resetPasswordTokenExpiresAt, 'User should have a reset token expiry');
+      ok(
+        updatedUser.resetPasswordTokenExpiresAt > new Date(),
+        'Reset token expiry should be in the future'
+      );
+    });
+
+    it('should return OK (without sending email) for a non-existent email.', async () => {
+      let emailSent = false;
+      controller.emailService = {
+        sendVerificationEmail: async () => {},
+        sendPasswordResetEmail: async () => {
+          emailSent = true;
+        },
+      } as EmailService;
+
+      const ctx = new Context({ body: { email: 'nobody@example.com' } });
+      const response = await controller.forgotPassword(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      strictEqual(emailSent, false, 'Email should not be sent for non-existent email');
+    });
+
+    it('should reject a missing or invalid email.', async () => {
+      const ctx = new Context({ body: {} });
+      const response = await controller.forgotPassword(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+  });
+
+  describe('has a "resetPassword" method that', () => {
+    it('should handle requests at POST /reset-password/:token.', () => {
+      strictEqual(getHttpMethod(AuthController, 'resetPassword'), 'POST');
+      strictEqual(getPath(AuthController, 'resetPassword'), '/reset-password/:token');
+    });
+
+    it('should reset the password with a valid, non-expired token.', async () => {
+      const resetToken = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'doreset@example.com';
+      user.password = 'OldPassword1';
+      user.firstName = 'Do';
+      user.lastName = 'Reset';
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await user.save();
+
+      const ctx = new Context({
+        params: { token: resetToken },
+        body: { password: 'NewPassword1' },
+      });
+      const response = await controller.resetPassword(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.message, 'Password reset successfully');
+
+      // Token should be cleared and password updated
+      const updatedUser = await User.findOne({ where: { email: 'doreset@example.com' } });
+      strictEqual(updatedUser?.resetPasswordToken, null);
+      strictEqual(updatedUser?.resetPasswordTokenExpiresAt, null);
+      ok(updatedUser?.password.startsWith('$2b$'), 'Password should be re-hashed with bcrypt');
+    });
+
+    it('should reject an invalid (non-existent) reset token.', async () => {
+      const ctx = new Context({
+        params: { token: 'nonexistentresettoken' },
+        body: { password: 'NewPassword1' },
+      });
+      const response = await controller.resetPassword(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid or expired password reset token');
+    });
+
+    it('should reject an expired reset token.', async () => {
+      const resetToken = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'expiredreset@example.com';
+      user.password = 'OldPassword1';
+      user.firstName = 'Expired';
+      user.lastName = 'Reset';
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordTokenExpiresAt = new Date(Date.now() - 1000); // 1 second ago (expired)
+      await user.save();
+
+      const ctx = new Context({
+        params: { token: resetToken },
+        body: { password: 'NewPassword1' },
+      });
+      const response = await controller.resetPassword(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid or expired password reset token');
+
+      // Password should remain unchanged
+      const unchanged = await User.findOne({ where: { email: 'expiredreset@example.com' } });
+      ok(unchanged?.resetPasswordToken, 'Token should not be cleared after rejected attempt');
+    });
+
+    it('should reject a reset with a weak new password.', async () => {
+      const resetToken = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'weakpw@example.com';
+      user.password = 'OldPassword1';
+      user.firstName = 'Weak';
+      user.lastName = 'Pw';
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save();
+
+      const ctx = new Context({
+        params: { token: resetToken },
+        body: { password: 'weak' }, // Too weak
+      });
+      const response = await controller.resetPassword(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+
+    it('should reject a reset with a missing password.', async () => {
+      const resetToken = randomBytes(32).toString('hex');
+      const ctx = new Context({
+        params: { token: resetToken },
+        body: {},
+      });
+      const response = await controller.resetPassword(ctx);
 
       if (!isHttpResponseBadRequest(response)) {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');

@@ -15,4 +15,17 @@ export class EmailService {
       `[EmailService] Sending verification email to ${email}. Verification URL: ${verificationUrl}`
     );
   }
+
+  /**
+   * Send a password reset email to the user.
+   * In production, replace the console.log with a real email provider
+   * (e.g. nodemailer, SendGrid, AWS SES).
+   */
+  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+    const baseUrl = Config.get('app.baseUrl', 'string', 'http://localhost:3001');
+    const resetUrl = `${baseUrl}/reset-password/${token}`;
+
+    // TODO: Integrate a real email provider here.
+    console.log(`[EmailService] Sending password reset email to ${email}. Reset URL: ${resetUrl}`);
+  }
 }
