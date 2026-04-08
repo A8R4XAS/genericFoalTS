@@ -17,5 +17,8 @@
   },
   "jwt": {
     "secret": "test-jwt-secret-not-for-production"
+  },
+  "bcrypt": {
+    "saltRounds": 1
   }
 }

@@ -39,6 +39,7 @@
     "@foal/jwt": "^5.2.1",
     "@foal/typeorm": "^5.2.1",
     "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.16.3",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@foal/cli": "^5.0.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/mocha": "10.0.10",
     "@types/node": "24.10.0",
     "@typescript-eslint/eslint-plugin": "~6.5.0",

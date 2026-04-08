@@ -1,4 +1,5 @@
-import { PasswordService } from '@foal/core';
+import * as bcrypt from 'bcrypt';
+import { Config } from '@foal/core';
 import {
   BaseEntity,
   BeforeInsert,
@@ -56,15 +57,15 @@ export class User extends BaseEntity {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (!this.password || isPbkdf2Hash(this.password)) {
+    if (!this.password || isBcryptHash(this.password)) {
       return;
     }
 
-    const passwordService = new PasswordService();
-    this.password = await passwordService.hashPassword(this.password);
+    const saltRounds = Config.get('bcrypt.saltRounds', 'number', 10);
+    this.password = await bcrypt.hash(this.password, saltRounds);
   }
 }
 
-function isPbkdf2Hash(value: string): boolean {
-  return value.startsWith('pbkdf2_');
+function isBcryptHash(value: string): boolean {
+  return value.startsWith('$2b$') || value.startsWith('$2a$');
 }

@@ -6,7 +6,6 @@ import {
   HttpResponseCreated,
   HttpResponseOK,
   HttpResponseUnauthorized,
-  PasswordService,
   Post,
   dependency,
 } from '@foal/core';
@@ -15,10 +14,11 @@ import { randomBytes } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { User } from '../entities';
 import { loginSchema, refreshTokenSchema, registerSchema } from '../../validators';
+import { PasswordHashingService } from '../services';
 
 export class AuthController {
   @dependency
-  passwordService: PasswordService;
+  passwordHashingService: PasswordHashingService;
 
   /**
    * POST /api/auth/register
@@ -98,7 +98,7 @@ export class AuthController {
         return new HttpResponseUnauthorized({ error: 'Invalid credentials' });
       }
 
-      const passwordValid = await this.passwordService.verifyPassword(
+      const passwordValid = await this.passwordHashingService.verify(
         validatedData.password,
         user.password
       );
