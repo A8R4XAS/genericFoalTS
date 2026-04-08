@@ -5,23 +5,32 @@ import { strictEqual, ok } from 'assert';
 import {
   Context,
   createController,
+  getHookFunction,
   getHttpMethod,
   getPath,
   isHttpResponseBadRequest,
+  isHttpResponseForbidden,
   isHttpResponseNotFound,
   isHttpResponseOK,
+  isHttpResponseUnauthorized,
 } from '@foal/core';
 
 // App
 import { AdminController } from './admin.controller';
 import { User, UserRole } from '../entities';
 import { dataSource } from '../../db';
+import { RequirePermission } from '../hooks';
 
 /** Helper: create a Context with an authenticated user attached. */
 function makeAuthCtx(user: User, body?: object, params?: object): Context {
   const ctx = new Context({ body: body ?? {}, params: params ?? {} });
   (ctx as any).user = user;
   return ctx;
+}
+
+/** Helper: create a Context without any authenticated user (unauthenticated). */
+function makeUnauthCtx(): Context {
+  return new Context({});
 }
 
 describe('AdminController', () => {
@@ -76,7 +85,31 @@ describe('AdminController', () => {
       strictEqual(getPath(AdminController, 'listUsers'), '/users');
     });
 
-    it('should return all users for an admin.', async () => {
+    it('should return 401 for unauthenticated requests.', () => {
+      const hook = getHookFunction(RequirePermission('read:users'));
+      const result = hook(makeUnauthCtx(), null as any);
+      strictEqual(isHttpResponseUnauthorized(result), true);
+    });
+
+    it('should return 403 for users with USER role.', () => {
+      const hook = getHookFunction(RequirePermission('read:users'));
+      const result = hook(makeAuthCtx(regularUser), null as any);
+      strictEqual(isHttpResponseForbidden(result), true);
+    });
+
+    it('should allow access for users with MODERATOR role.', () => {
+      const hook = getHookFunction(RequirePermission('read:users'));
+      const result = hook(makeAuthCtx(moderatorUser), null as any);
+      strictEqual(result === undefined || result === null, true);
+    });
+
+    it('should allow access for users with ADMIN role.', () => {
+      const hook = getHookFunction(RequirePermission('read:users'));
+      const result = hook(makeAuthCtx(adminUser), null as any);
+      strictEqual(result === undefined || result === null, true);
+    });
+
+    it('should return all users without sensitive fields.', async () => {
       const response = await controller.listUsers();
 
       if (!isHttpResponseOK(response)) {
@@ -90,18 +123,14 @@ describe('AdminController', () => {
         body.every(u => !('password' in u)),
         'Response should not include passwords'
       );
-    });
-
-    it('should return all users for a moderator.', async () => {
-      const response = await controller.listUsers();
-
-      if (!isHttpResponseOK(response)) {
-        throw new Error('The response should be an instance of HttpResponseOK.');
-      }
-
-      const body = response.body as any[];
-      ok(Array.isArray(body));
-      strictEqual(body.length, 3);
+      ok(
+        body.every(u => !('verificationToken' in u)),
+        'Response should not include verification tokens'
+      );
+      ok(
+        body.every(u => !('resetPasswordToken' in u)),
+        'Response should not include reset password tokens'
+      );
     });
   });
 

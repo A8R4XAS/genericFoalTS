@@ -24,7 +24,18 @@ export class AdminController {
   @Get('/users')
   @RequirePermission('read:users')
   async listUsers() {
-    const users = await User.find({ order: { id: 'ASC' } });
+    const users = await User.find({
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+      },
+      order: { id: 'ASC' },
+    });
     return new HttpResponseOK(
       users.map(u => ({
         id: u.id,
