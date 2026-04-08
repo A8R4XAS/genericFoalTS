@@ -13,5 +13,8 @@
     "secret": "env(JWT_SECRET)",
     "accessTokenExpiresIn": "15m",
     "refreshTokenExpiresIn": "7d"
+  },
+  "bcrypt": {
+    "saltRounds": 10
   }
 }

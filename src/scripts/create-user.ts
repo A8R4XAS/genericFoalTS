@@ -1,9 +1,10 @@
 // 3p
-import { Logger, ServiceManager, PasswordService } from '@foal/core';
+import { Logger, ServiceManager } from '@foal/core';
 
 // App
 import { User } from '../app/entities';
 import { dataSource } from '../db';
+import { PasswordHashingService } from '../app/services';
 
 export const schema = {
   additionalProperties: false,
@@ -19,10 +20,10 @@ export async function main(args: any, services: ServiceManager, logger: Logger) 
   await dataSource.initialize();
 
   try {
-    const passwordService = services.get(PasswordService);
+    const passwordHashingService = services.get(PasswordHashingService);
     const user = new User();
     user.email = args.email;
-    user.password = await passwordService.hashPassword(args.password);
+    user.password = await passwordHashingService.hash(args.password);
 
     await user.save();
 

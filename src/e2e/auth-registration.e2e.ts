@@ -50,7 +50,7 @@ describe('[E2E] User Registration', () => {
       // Verify user is saved in database with hashed password
       const savedUser = await User.findOne({ where: { email: 'newuser@example.com' } });
       ok(savedUser, 'User should be saved in database');
-      ok(savedUser?.password.startsWith('pbkdf2_'), 'Password should be hashed');
+      ok(savedUser?.password.startsWith('$2b$'), 'Password should be hashed with bcrypt');
     });
 
     it('should reject registration with duplicate email (409 Conflict)', async () => {

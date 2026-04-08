@@ -72,7 +72,7 @@ describe('AuthController', () => {
       const savedUser = await User.findOne({ where: { email: 'test@example.com' } });
       ok(savedUser, 'User should be saved in database');
       strictEqual(savedUser?.email, 'test@example.com');
-      ok(savedUser?.password.startsWith('pbkdf2_'), 'Password should be hashed');
+      ok(savedUser?.password.startsWith('$2b$'), 'Password should be hashed with bcrypt');
     });
 
     it('should reject registration with duplicate email.', async () => {

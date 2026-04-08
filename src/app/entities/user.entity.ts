@@ -1,4 +1,3 @@
-import { PasswordService } from '@foal/core';
 import {
   BaseEntity,
   BeforeInsert,
@@ -10,6 +9,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { PasswordHashingService } from '../services';
+
+const passwordHashingService = new PasswordHashingService();
 
 export enum UserRole {
   USER = 'user',
@@ -56,15 +58,10 @@ export class User extends BaseEntity {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (!this.password || isPbkdf2Hash(this.password)) {
+    if (!this.password || PasswordHashingService.isBcryptHash(this.password)) {
       return;
     }
 
-    const passwordService = new PasswordService();
-    this.password = await passwordService.hashPassword(this.password);
+    this.password = await passwordHashingService.hash(this.password);
   }
-}
-
-function isPbkdf2Hash(value: string): boolean {
-  return value.startsWith('pbkdf2_');
 }
