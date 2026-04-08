@@ -14,19 +14,25 @@ export type Permission =
 /**
  * Role-to-permissions mapping.
  * Each role is granted a specific set of permissions.
+ *
+ * Kept private to this module and frozen to prevent runtime mutation.
  */
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.USER]: ['read:profile'],
-  [UserRole.MODERATOR]: ['read:profile', 'read:users', 'moderate:content'],
-  [UserRole.ADMIN]: [
+const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>> = Object.freeze({
+  [UserRole.USER]: Object.freeze(['read:profile']),
+  [UserRole.MODERATOR]: Object.freeze([
+    'read:profile',
+    'read:users',
+    'moderate:content',
+  ]),
+  [UserRole.ADMIN]: Object.freeze([
     'read:profile',
     'read:users',
     'write:users',
     'delete:users',
     'assign:roles',
     'moderate:content',
-  ],
-};
+  ]),
+});
 
 /**
  * Returns true if the given role has the specified permission.
