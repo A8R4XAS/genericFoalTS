@@ -16,5 +16,8 @@
   },
   "bcrypt": {
     "saltRounds": 10
+  },
+  "app": {
+    "baseUrl": "env(APP_BASE_URL)"
   }
 }
