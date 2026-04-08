@@ -38,6 +38,7 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 
 /**
  * Returns the full list of permissions for a given role.
+ * Returns a defensive copy so callers cannot mutate the global mapping.
  */
 export function getPermissions(role: UserRole): Permission[] {
   const permissions = ROLE_PERMISSIONS[role];

@@ -158,6 +158,15 @@ describe('AdminController', () => {
       }
     });
 
+    it('should return 400 when a partial-numeric user ID is provided.', async () => {
+      const ctx = makeAuthCtx(adminUser, { role: UserRole.MODERATOR }, { id: '1abc' });
+      const response = await controller.assignRole(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+    });
+
     it('should allow assigning all valid roles.', async () => {
       for (const role of Object.values(UserRole)) {
         const ctx = makeAuthCtx(adminUser, { role }, { id: regularUser.id.toString() });

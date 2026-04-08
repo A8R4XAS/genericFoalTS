@@ -47,11 +47,13 @@ export class AdminController {
   async assignRole(ctx: Context) {
     try {
       const { id } = ctx.request.params as { id: string };
-      const userId = parseInt(id, 10);
 
-      if (isNaN(userId)) {
+      // Reject partial-numeric strings like "1abc" that parseInt would silently accept
+      if (!/^\d+$/.test(id)) {
         return new HttpResponseBadRequest({ error: 'Invalid user ID' });
       }
+
+      const userId = parseInt(id, 10);
 
       const validatedData = assignRoleSchema.parse(ctx.request.body);
 
