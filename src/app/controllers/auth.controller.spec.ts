@@ -14,7 +14,7 @@ import {
   isHttpResponseUnauthorized,
 } from '@foal/core';
 import * as jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 // App
 import { AuthController } from './auth.controller';
@@ -612,6 +612,14 @@ describe('AuthController', () => {
         updatedUser.resetPasswordTokenExpiresAt > new Date(),
         'Reset token expiry should be in the future'
       );
+
+      // The DB should store the SHA-256 hash of the raw emailed token
+      const expectedHash = createHash('sha256').update(emailToken).digest('hex');
+      strictEqual(
+        updatedUser.resetPasswordToken,
+        expectedHash,
+        'DB should store SHA-256 hash of the raw token, not the raw token itself'
+      );
     });
 
     it('should return OK (without sending email) for a non-existent email.', async () => {
@@ -654,12 +662,13 @@ describe('AuthController', () => {
 
     it('should reset the password with a valid, non-expired token.', async () => {
       const resetToken = randomBytes(32).toString('hex');
+      const hashedResetToken = createHash('sha256').update(resetToken).digest('hex');
       const user = new User();
       user.email = 'doreset@example.com';
       user.password = 'OldPassword1';
       user.firstName = 'Do';
       user.lastName = 'Reset';
-      user.resetPasswordToken = resetToken;
+      user.resetPasswordToken = hashedResetToken;
       user.resetPasswordTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await user.save();
 
@@ -700,12 +709,13 @@ describe('AuthController', () => {
 
     it('should reject an expired reset token.', async () => {
       const resetToken = randomBytes(32).toString('hex');
+      const hashedResetToken = createHash('sha256').update(resetToken).digest('hex');
       const user = new User();
       user.email = 'expiredreset@example.com';
       user.password = 'OldPassword1';
       user.firstName = 'Expired';
       user.lastName = 'Reset';
-      user.resetPasswordToken = resetToken;
+      user.resetPasswordToken = hashedResetToken;
       user.resetPasswordTokenExpiresAt = new Date(Date.now() - 1000); // 1 second ago (expired)
       await user.save();
 
@@ -729,12 +739,13 @@ describe('AuthController', () => {
 
     it('should reject a reset with a weak new password.', async () => {
       const resetToken = randomBytes(32).toString('hex');
+      const hashedResetToken = createHash('sha256').update(resetToken).digest('hex');
       const user = new User();
       user.email = 'weakpw@example.com';
       user.password = 'OldPassword1';
       user.firstName = 'Weak';
       user.lastName = 'Pw';
-      user.resetPasswordToken = resetToken;
+      user.resetPasswordToken = hashedResetToken;
       user.resetPasswordTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
       await user.save();
 

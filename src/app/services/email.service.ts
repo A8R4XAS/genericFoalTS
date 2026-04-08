@@ -22,10 +22,11 @@ export class EmailService {
    * (e.g. nodemailer, SendGrid, AWS SES).
    */
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const baseUrl = Config.get('app.baseUrl', 'string', 'http://localhost:3001');
-    const resetUrl = `${baseUrl}/reset-password/${token}`;
+    const frontendBaseUrl = Config.get('app.frontendBaseUrl', 'string', 'http://localhost:3000');
+    const resetUrl = `${frontendBaseUrl}/reset-password/${token}`;
 
     // TODO: Integrate a real email provider here.
+    // NOTE: Do not log the resetUrl – it contains a valid credential.
     console.log(`[EmailService] Sending password reset email to ${email}. Reset URL: ${resetUrl}`);
   }
 }

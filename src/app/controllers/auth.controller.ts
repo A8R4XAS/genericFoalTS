@@ -11,7 +11,7 @@ import {
   dependency,
 } from '@foal/core';
 import { ZodError } from 'zod';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { User } from '../entities';
 import {
@@ -311,9 +311,11 @@ export class AuthController {
         });
       }
 
-      // Generate reset token (32 bytes = 64 hex characters) with expiry
+      // Generate reset token (32 bytes = 64 hex characters) with expiry.
+      // Only the SHA-256 hash is stored in the DB; the raw token is emailed to the user.
       const resetToken = randomBytes(32).toString('hex');
-      user.resetPasswordToken = resetToken;
+      const hashedResetToken = createHash('sha256').update(resetToken).digest('hex');
+      user.resetPasswordToken = hashedResetToken;
       user.resetPasswordTokenExpiresAt = new Date(
         Date.now() + RESET_PASSWORD_TOKEN_TTL_HOURS * 60 * 60 * 1000
       );
@@ -352,7 +354,9 @@ export class AuthController {
       const { token } = ctx.request.params as { token: string };
       const validatedData = resetPasswordSchema.parse(ctx.request.body);
 
-      const user = await User.findOne({ where: { resetPasswordToken: token } });
+      // Hash the provided raw token to match the stored hash
+      const hashedToken = createHash('sha256').update(token).digest('hex');
+      const user = await User.findOne({ where: { resetPasswordToken: hashedToken } });
 
       if (!user) {
         return new HttpResponseBadRequest({ error: 'Invalid or expired password reset token' });
