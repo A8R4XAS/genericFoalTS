@@ -3,6 +3,13 @@ import { Config } from '@foal/core';
 
 export class PasswordHashingService {
   /**
+   * Returns true if the value is already a bcrypt hash (any supported variant).
+   */
+  static isBcryptHash(value: string): boolean {
+    return /^\$2[abxy]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
+  }
+
+  /**
    * Hash a plain-text password using bcrypt.
    * Salt rounds are configured via the `bcrypt.saltRounds` config key (default: 10).
    */

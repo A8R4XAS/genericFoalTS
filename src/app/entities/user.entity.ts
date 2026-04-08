@@ -1,5 +1,3 @@
-import * as bcrypt from 'bcrypt';
-import { Config } from '@foal/core';
 import {
   BaseEntity,
   BeforeInsert,
@@ -11,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { PasswordHashingService } from '../services';
 
 export enum UserRole {
   USER = 'user',
@@ -57,15 +56,11 @@ export class User extends BaseEntity {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (!this.password || isBcryptHash(this.password)) {
+    if (!this.password || PasswordHashingService.isBcryptHash(this.password)) {
       return;
     }
 
-    const saltRounds = Config.get('bcrypt.saltRounds', 'number', 10);
-    this.password = await bcrypt.hash(this.password, saltRounds);
+    const service = new PasswordHashingService();
+    this.password = await service.hash(this.password);
   }
-}
-
-function isBcryptHash(value: string): boolean {
-  return value.startsWith('$2b$') || value.startsWith('$2a$');
 }
