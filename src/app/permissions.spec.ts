@@ -61,5 +61,15 @@ describe('Permissions', () => {
       deepStrictEqual(getPermissions(UserRole.MODERATOR), ROLE_PERMISSIONS[UserRole.MODERATOR]);
       deepStrictEqual(getPermissions(UserRole.ADMIN), ROLE_PERMISSIONS[UserRole.ADMIN]);
     });
+
+    it('should return a defensive copy that does not mutate the global mapping', () => {
+      const role = UserRole.MODERATOR;
+      const originalPermissions = [...ROLE_PERMISSIONS[role]];
+      const permissions = getPermissions(role);
+
+      permissions.push('assign:roles');
+
+      deepStrictEqual(ROLE_PERMISSIONS[role], originalPermissions);
+    });
   });
 });
