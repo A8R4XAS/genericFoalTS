@@ -1,6 +1,7 @@
 import {
   Config,
   Context,
+  Get,
   HttpResponseBadRequest,
   HttpResponseConflict,
   HttpResponseCreated,
@@ -13,16 +14,28 @@ import { ZodError } from 'zod';
 import { randomBytes } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { User } from '../entities';
-import { loginSchema, refreshTokenSchema, registerSchema } from '../../validators';
-import { PasswordHashingService } from '../services';
+import {
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+  resendVerificationSchema,
+} from '../../validators';
+import { EmailService, PasswordHashingService } from '../services';
+
+/** Verification token TTL in hours (default: 24) */
+const VERIFICATION_TOKEN_TTL_HOURS = 24;
 
 export class AuthController {
   @dependency
   passwordHashingService: PasswordHashingService;
 
+  @dependency
+  emailService: EmailService;
+
   /**
    * POST /api/auth/register
-   * Register a new user with email, password, firstName, and lastName
+   * Register a new user with email, password, firstName, and lastName.
+   * Sends a verification email with a time-limited token.
    */
   @Post('/register')
   async register(ctx: Context) {
@@ -49,12 +62,20 @@ export class AuthController {
       user.lastName = validatedData.lastName;
       user.isVerified = false;
 
-      // Generate verification token (32 bytes = 64 hex characters)
+      // Generate verification token (32 bytes = 64 hex characters) with expiry
       const verificationToken = randomBytes(32).toString('hex');
       user.verificationToken = verificationToken;
+      user.verificationTokenExpiresAt = new Date(
+        Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000
+      );
 
       // Save user to database
       await user.save();
+
+      // Send verification email (errors are logged but do not fail the request)
+      await this.emailService
+        .sendVerificationEmail(user.email, verificationToken)
+        .catch(err => console.error('[AuthController] Failed to send verification email:', err));
 
       // Return response without sensitive data
       return new HttpResponseCreated({
@@ -64,7 +85,6 @@ export class AuthController {
         lastName: user.lastName,
         isVerified: user.isVerified,
         createdAt: user.createdAt,
-        verificationToken, // In production, this would be sent via email
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -79,6 +99,84 @@ export class AuthController {
       }
 
       // Re-throw unexpected errors
+      throw error;
+    }
+  }
+
+  /**
+   * GET /api/auth/verify/:token
+   * Verify a user's email address using the token sent in the verification email.
+   */
+  @Get('/verify/:token')
+  async verifyEmail(ctx: Context) {
+    const { token } = ctx.request.params as { token: string };
+
+    const user = await User.findOne({ where: { verificationToken: token } });
+
+    if (!user) {
+      return new HttpResponseBadRequest({ error: 'Invalid or expired verification token' });
+    }
+
+    if (user.isVerified) {
+      return new HttpResponseOK({ message: 'Email already verified' });
+    }
+
+    if (!user.verificationTokenExpiresAt || user.verificationTokenExpiresAt < new Date()) {
+      return new HttpResponseBadRequest({ error: 'Invalid or expired verification token' });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpiresAt = null;
+    await user.save();
+
+    return new HttpResponseOK({ message: 'Email verified successfully' });
+  }
+
+  /**
+   * POST /api/auth/resend-verification
+   * Resend the verification email for an unverified account.
+   */
+  @Post('/resend-verification')
+  async resendVerification(ctx: Context) {
+    try {
+      const validatedData = resendVerificationSchema.parse(ctx.request.body);
+
+      const user = await User.findOne({ where: { email: validatedData.email } });
+
+      // Always return OK to avoid user enumeration
+      if (!user || user.isVerified) {
+        return new HttpResponseOK({
+          message: 'If this email is registered and unverified, a verification email has been sent',
+        });
+      }
+
+      // Generate new token and expiry
+      const verificationToken = randomBytes(32).toString('hex');
+      user.verificationToken = verificationToken;
+      user.verificationTokenExpiresAt = new Date(
+        Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000
+      );
+      await user.save();
+
+      await this.emailService
+        .sendVerificationEmail(user.email, verificationToken)
+        .catch(err => console.error('[AuthController] Failed to send verification email:', err));
+
+      return new HttpResponseOK({
+        message: 'If this email is registered and unverified, a verification email has been sent',
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return new HttpResponseBadRequest({
+          error: 'Validation failed',
+          details: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        });
+      }
+
       throw error;
     }
   }

@@ -43,3 +43,12 @@ export const refreshTokenSchema = z.object({
 });
 
 export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;
+
+/**
+ * Validation schema for resending the verification email
+ */
+export const resendVerificationSchema = z.object({
+  email: z.string().min(1, 'Email is required').trim().toLowerCase().email('Invalid email format'),
+});
+
+export type ResendVerificationDto = z.infer<typeof resendVerificationSchema>;

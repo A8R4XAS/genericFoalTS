@@ -14,11 +14,13 @@ import {
   isHttpResponseUnauthorized,
 } from '@foal/core';
 import * as jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 
 // App
 import { AuthController } from './auth.controller';
 import { User } from '../entities';
 import { dataSource } from '../../db';
+import { EmailService } from '../services';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -33,6 +35,10 @@ describe('AuthController', () => {
 
   beforeEach(async () => {
     controller = createController(AuthController);
+    // Stub the email service to avoid real sends during tests
+    controller.emailService = {
+      sendVerificationEmail: async () => {},
+    } as EmailService;
     // Clean up users table before each test
     await User.clear();
   });
@@ -65,14 +71,16 @@ describe('AuthController', () => {
       strictEqual(body.lastName, 'Doe');
       strictEqual(body.isVerified, false);
       ok(body.id, 'User should have an id');
-      ok(body.verificationToken, 'Should include verification token');
       ok(!body.password, 'Response should not include password');
+      ok(!body.verificationToken, 'Response should not include verification token');
 
-      // Verify user was saved to database
+      // Verify user was saved to database with token
       const savedUser = await User.findOne({ where: { email: 'test@example.com' } });
       ok(savedUser, 'User should be saved in database');
       strictEqual(savedUser?.email, 'test@example.com');
       ok(savedUser?.password.startsWith('$2b$'), 'Password should be hashed with bcrypt');
+      ok(savedUser?.verificationToken, 'User should have a verification token');
+      ok(savedUser?.verificationTokenExpiresAt, 'User should have a token expiry date');
     });
 
     it('should reject registration with duplicate email.', async () => {
@@ -194,6 +202,204 @@ describe('AuthController', () => {
       });
 
       const response = await controller.register(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Validation failed');
+    });
+  });
+
+  describe('has a "verifyEmail" method that', () => {
+    it('should handle requests at GET /verify/:token.', () => {
+      strictEqual(getHttpMethod(AuthController, 'verifyEmail'), 'GET');
+      strictEqual(getPath(AuthController, 'verifyEmail'), '/verify/:token');
+    });
+
+    it('should verify a user with a valid, non-expired token.', async () => {
+      const token = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'verify@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Verify';
+      user.lastName = 'User';
+      user.verificationToken = token;
+      user.verificationTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      user.isVerified = false;
+      await user.save();
+
+      const ctx = new Context({ params: { token } });
+      const response = await controller.verifyEmail(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.message, 'Email verified successfully');
+
+      const updatedUser = await User.findOne({ where: { email: 'verify@example.com' } });
+      strictEqual(updatedUser?.isVerified, true);
+      strictEqual(updatedUser?.verificationToken, null);
+      strictEqual(updatedUser?.verificationTokenExpiresAt, null);
+    });
+
+    it('should reject an invalid (non-existent) token.', async () => {
+      const ctx = new Context({ params: { token: 'nonexistenttoken' } });
+      const response = await controller.verifyEmail(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid or expired verification token');
+    });
+
+    it('should reject an expired token.', async () => {
+      const token = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'expired@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Expired';
+      user.lastName = 'User';
+      user.verificationToken = token;
+      user.verificationTokenExpiresAt = new Date(Date.now() - 1000); // 1 second ago (expired)
+      user.isVerified = false;
+      await user.save();
+
+      const ctx = new Context({ params: { token } });
+      const response = await controller.verifyEmail(ctx);
+
+      if (!isHttpResponseBadRequest(response)) {
+        throw new Error('The response should be an instance of HttpResponseBadRequest.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.error, 'Invalid or expired verification token');
+
+      // User should remain unverified
+      const unchanged = await User.findOne({ where: { email: 'expired@example.com' } });
+      strictEqual(unchanged?.isVerified, false);
+    });
+
+    it('should return OK if the user is already verified.', async () => {
+      const token = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'alreadyverified@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Already';
+      user.lastName = 'Verified';
+      user.verificationToken = token;
+      user.verificationTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      user.isVerified = true;
+      await user.save();
+
+      const ctx = new Context({ params: { token } });
+      const response = await controller.verifyEmail(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      const body = response.body as any;
+      strictEqual(body.message, 'Email already verified');
+    });
+  });
+
+  describe('has a "resendVerification" method that', () => {
+    it('should handle requests at POST /resend-verification.', () => {
+      strictEqual(getHttpMethod(AuthController, 'resendVerification'), 'POST');
+      strictEqual(getPath(AuthController, 'resendVerification'), '/resend-verification');
+    });
+
+    it('should issue a new token and send an email for an unverified user.', async () => {
+      const oldToken = randomBytes(32).toString('hex');
+      const user = new User();
+      user.email = 'resend@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Resend';
+      user.lastName = 'User';
+      user.verificationToken = oldToken;
+      user.verificationTokenExpiresAt = new Date(Date.now() - 1000); // expired
+      user.isVerified = false;
+      await user.save();
+
+      let emailSentTo = '';
+      controller.emailService = {
+        sendVerificationEmail: async (email: string) => {
+          emailSentTo = email;
+        },
+      } as EmailService;
+
+      const ctx = new Context({ body: { email: 'resend@example.com' } });
+      const response = await controller.resendVerification(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      strictEqual(
+        emailSentTo,
+        'resend@example.com',
+        'Verification email should have been sent to the user'
+      );
+
+      const updatedUser = await User.findOne({ where: { email: 'resend@example.com' } });
+      ok(updatedUser?.verificationToken !== oldToken, 'Token should be refreshed');
+      ok(updatedUser?.verificationTokenExpiresAt, 'New expiry should be set');
+      ok(updatedUser.verificationTokenExpiresAt > new Date(), 'New expiry should be in the future');
+    });
+
+    it('should return OK (without sending email) for an already-verified user.', async () => {
+      const user = new User();
+      user.email = 'verified@example.com';
+      user.password = 'Password123';
+      user.firstName = 'Verified';
+      user.lastName = 'User';
+      user.isVerified = true;
+      await user.save();
+
+      let emailSent = false;
+      controller.emailService = {
+        sendVerificationEmail: async () => {
+          emailSent = true;
+        },
+      } as EmailService;
+
+      const ctx = new Context({ body: { email: 'verified@example.com' } });
+      const response = await controller.resendVerification(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      strictEqual(emailSent, false, 'Email should not be sent for already-verified users');
+    });
+
+    it('should return OK (without sending email) for a non-existent email.', async () => {
+      let emailSent = false;
+      controller.emailService = {
+        sendVerificationEmail: async () => {
+          emailSent = true;
+        },
+      } as EmailService;
+
+      const ctx = new Context({ body: { email: 'nobody@example.com' } });
+      const response = await controller.resendVerification(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      strictEqual(emailSent, false, 'Email should not be sent for non-existent email');
+    });
+
+    it('should reject a missing or invalid email.', async () => {
+      const ctx = new Context({ body: {} });
+      const response = await controller.resendVerification(ctx);
 
       if (!isHttpResponseBadRequest(response)) {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');

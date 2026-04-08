@@ -49,6 +49,9 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   verificationToken: string | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  verificationTokenExpiresAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
