@@ -19,8 +19,9 @@ export class PasswordHashingService {
   }
 
   /**
-   * Update a user's password by hashing the new password with bcrypt.
-   * Re-hashes the password regardless of its current state.
+   * Update a user's password by hashing the new plain-text password with bcrypt.
+   * Provides a dedicated entry point for password update flows, allowing future
+   * extension with logic such as password history checks or change auditing.
    */
   async updatePassword(newPassword: string): Promise<string> {
     return this.hash(newPassword);
