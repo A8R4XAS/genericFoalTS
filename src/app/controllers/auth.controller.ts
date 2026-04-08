@@ -11,7 +11,7 @@ import {
   dependency,
 } from '@foal/core';
 import { ZodError } from 'zod';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { User } from '../entities';
 import {
@@ -19,11 +19,16 @@ import {
   refreshTokenSchema,
   registerSchema,
   resendVerificationSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from '../../validators';
 import { EmailService, PasswordHashingService } from '../services';
 
 /** Verification token TTL in hours (default: 24) */
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
+
+/** Password reset token TTL in hours (default: 1) */
+const RESET_PASSWORD_TOKEN_TTL_HOURS = 1;
 
 export class AuthController {
   @dependency
@@ -273,6 +278,101 @@ export class AuthController {
         tokenType: 'Bearer',
         expiresIn: accessExpiresIn,
       });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return new HttpResponseBadRequest({
+          error: 'Validation failed',
+          details: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/auth/forgot-password
+   * Request a password-reset email. Always returns OK to avoid user enumeration.
+   */
+  @Post('/forgot-password')
+  async forgotPassword(ctx: Context) {
+    try {
+      const validatedData = forgotPasswordSchema.parse(ctx.request.body);
+
+      const user = await User.findOne({ where: { email: validatedData.email } });
+
+      // Always return OK to avoid user enumeration
+      if (!user) {
+        return new HttpResponseOK({
+          message: 'If this email is registered, a password reset email has been sent',
+        });
+      }
+
+      // Generate reset token (32 bytes = 64 hex characters) with expiry.
+      // Only the SHA-256 hash is stored in the DB; the raw token is emailed to the user.
+      const resetToken = randomBytes(32).toString('hex');
+      const hashedResetToken = createHash('sha256').update(resetToken).digest('hex');
+      user.resetPasswordToken = hashedResetToken;
+      user.resetPasswordTokenExpiresAt = new Date(
+        Date.now() + RESET_PASSWORD_TOKEN_TTL_HOURS * 60 * 60 * 1000
+      );
+      await user.save();
+
+      await this.emailService
+        .sendPasswordResetEmail(user.email, resetToken)
+        .catch(err => console.error('[AuthController] Failed to send password reset email:', err));
+
+      return new HttpResponseOK({
+        message: 'If this email is registered, a password reset email has been sent',
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return new HttpResponseBadRequest({
+          error: 'Validation failed',
+          details: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        });
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * POST /api/auth/reset-password/:token
+   * Set a new password using a valid, non-expired reset token.
+   * Invalidates the token after use.
+   */
+  @Post('/reset-password/:token')
+  async resetPassword(ctx: Context) {
+    try {
+      const { token } = ctx.request.params as { token: string };
+      const validatedData = resetPasswordSchema.parse(ctx.request.body);
+
+      // Hash the provided raw token to match the stored hash
+      const hashedToken = createHash('sha256').update(token).digest('hex');
+      const user = await User.findOne({ where: { resetPasswordToken: hashedToken } });
+
+      if (!user) {
+        return new HttpResponseBadRequest({ error: 'Invalid or expired password reset token' });
+      }
+
+      if (!user.resetPasswordTokenExpiresAt || user.resetPasswordTokenExpiresAt < new Date()) {
+        return new HttpResponseBadRequest({ error: 'Invalid or expired password reset token' });
+      }
+
+      // Update password and invalidate the token
+      user.password = validatedData.password; // Will be hashed by @BeforeInsert/@BeforeUpdate hook
+      user.resetPasswordToken = null;
+      user.resetPasswordTokenExpiresAt = null;
+      await user.save();
+
+      return new HttpResponseOK({ message: 'Password reset successfully' });
     } catch (error) {
       if (error instanceof ZodError) {
         return new HttpResponseBadRequest({

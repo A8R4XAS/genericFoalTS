@@ -52,3 +52,26 @@ export const resendVerificationSchema = z.object({
 });
 
 export type ResendVerificationDto = z.infer<typeof resendVerificationSchema>;
+
+/**
+ * Validation schema for requesting a password reset email
+ */
+export const forgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required').trim().toLowerCase().email('Invalid email format'),
+});
+
+export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
+
+/**
+ * Validation schema for resetting the password using a reset token
+ */
+export const resetPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
+export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
