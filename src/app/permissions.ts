@@ -40,5 +40,6 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
  * Returns the full list of permissions for a given role.
  */
 export function getPermissions(role: UserRole): Permission[] {
-  return ROLE_PERMISSIONS[role] ?? [];
+  const permissions = ROLE_PERMISSIONS[role];
+  return permissions ? [...permissions] : [];
 }
