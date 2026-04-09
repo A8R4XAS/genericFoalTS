@@ -23,20 +23,15 @@ export enum Permission {
   MANAGE_USERS = 'manage:users',
 }
 
+const ALL_PERMISSIONS = Object.values(Permission) as Permission[];
+
 /**
  * Role-to-permission mapping.
  * Each role is granted a specific set of permissions.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.USER]: [Permission.READ_OWN_PROFILE, Permission.UPDATE_OWN_PROFILE],
-  [UserRole.ADMIN]: [
-    Permission.READ_OWN_PROFILE,
-    Permission.UPDATE_OWN_PROFILE,
-    Permission.READ_ANY_PROFILE,
-    Permission.UPDATE_ANY_PROFILE,
-    Permission.DELETE_ANY_USER,
-    Permission.MANAGE_USERS,
-  ],
+  [UserRole.ADMIN]: ALL_PERMISSIONS,
 };
 
 /**
