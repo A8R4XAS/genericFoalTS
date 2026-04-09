@@ -27,15 +27,20 @@ export function JwtRequired(): HookDecorator {
 
     const secret = Config.getOrThrow('jwt.secret', 'string');
 
-    let decoded: jwt.JwtPayload;
+    let decoded: string | jwt.JwtPayload;
     try {
-      decoded = jwt.verify(token, secret) as jwt.JwtPayload;
+      decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
     } catch {
       return new HttpResponseUnauthorized({ error: 'Invalid or expired token' });
     }
 
+    if (typeof decoded === 'string') {
+      return new HttpResponseUnauthorized({ error: 'Invalid or expired token' });
+    }
+
     const userId = decoded['userId'] as number | undefined;
-    if (!userId) {
+    const tokenType = decoded['tokenType'] as string | undefined;
+    if (!userId || tokenType !== 'access') {
       return new HttpResponseUnauthorized({ error: 'Invalid or expired token' });
     }
 
