@@ -1,11 +1,10 @@
 import { Context, Get, HttpResponseOK } from '@foal/core';
-import { JWTRequired } from '@foal/jwt';
 import { User, UserRole } from '../entities';
-import { Permission, PermissionRequired, RoleRequired } from '../hooks';
+import { JwtRequired, Permission, PermissionRequired, RoleRequired } from '../hooks';
 
-// @JWTRequired handles JWT verification and user loading for the whole controller.
+// @JwtRequired handles JWT verification and user loading for the whole controller.
 // Method-level @RoleRequired / @PermissionRequired hooks add authorization on top.
-@JWTRequired({ user: (id: number) => User.findOneBy({ id }) })
+@JwtRequired()
 export class ApiController {
   @Get('/')
   index(ctx: Context) {

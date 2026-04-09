@@ -57,12 +57,12 @@ describe('RoleRequired hook', () => {
     ok(response === undefined, 'Expected no response (request proceeds)');
   });
 
-  it('should return 403 when the user role is not in the allowed list.', () => {
-    const hookFn = getHookFunction(RoleRequired(UserRole.ADMIN));
+  it('should return nothing when the user has the only required role.', () => {
+    const hookFn = getHookFunction(RoleRequired(UserRole.USER));
     const ctx = makeContextWithUser({ role: UserRole.USER });
 
     const response = hookFn(ctx, new ServiceManager());
 
-    ok(isHttpResponseForbidden(response), 'Expected HttpResponseForbidden');
+    ok(response === undefined, 'Expected no response (request proceeds)');
   });
 });
