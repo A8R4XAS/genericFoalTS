@@ -6,6 +6,7 @@ import { Context, createController, getHttpMethod, getPath, isHttpResponseOK } f
 
 // App
 import { ApiController } from './api.controller';
+import { User, UserRole } from '../entities';
 
 describe('ApiController', () => {
   describe('has a "index" method that', () => {
@@ -25,6 +26,34 @@ describe('ApiController', () => {
       }
 
       strictEqual(response.body, 'Hello world!');
+    });
+  });
+
+  describe('has an "adminDashboard" method that', () => {
+    it('should handle requests at GET /admin.', () => {
+      strictEqual(getHttpMethod(ApiController, 'adminDashboard'), 'GET');
+      strictEqual(getPath(ApiController, 'adminDashboard'), '/admin');
+    });
+
+    it('should return a HttpResponseOK with admin info when user is set.', () => {
+      const controller = createController(ApiController);
+      const ctx = new Context({});
+      const user = new User();
+      user.id = 1;
+      user.email = 'admin@example.com';
+      user.role = UserRole.ADMIN;
+      ctx.user = user;
+
+      const response = controller.adminDashboard(ctx);
+
+      if (!isHttpResponseOK(response)) {
+        throw new Error('The response should be an instance of HttpResponseOK.');
+      }
+
+      strictEqual(response.body.message, 'Welcome to the admin dashboard');
+      strictEqual(response.body.admin.id, user.id);
+      strictEqual(response.body.admin.email, user.email);
+      strictEqual(response.body.admin.role, UserRole.ADMIN);
     });
   });
 });
