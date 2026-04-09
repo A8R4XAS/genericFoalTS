@@ -13,7 +13,7 @@ import { User } from '../entities';
  *
  * Returns 401 Unauthorized if the token is missing, malformed, or invalid.
  */
-export function AppJwtRequired(): HookDecorator {
+export function JwtRequired(): HookDecorator {
   return Hook(async (ctx: Context) => {
     const authHeader = ctx.request.get('Authorization');
 
