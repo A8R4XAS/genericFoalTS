@@ -39,8 +39,7 @@ export function AppJwtRequired(): HookDecorator {
     }
 
     const userId = decoded['userId'] as number | undefined;
-    const tokenType = decoded['tokenType'] as string | undefined;
-    if (!userId || tokenType !== 'access') {
+    if (!userId) {
       return new HttpResponseUnauthorized({ error: 'Invalid or expired token' });
     }
 
