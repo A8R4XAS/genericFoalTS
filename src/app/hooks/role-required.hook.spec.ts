@@ -21,6 +21,20 @@ function makeContextWithUser(user: Partial<User> | null): Context {
 }
 
 describe('RoleRequired hook', () => {
+  it('should throw when called with no roles.', () => {
+    let threw = false;
+    try {
+      RoleRequired();
+    } catch (err: unknown) {
+      threw = true;
+      ok(
+        err instanceof Error && err.message.includes('no roles'),
+        'Expected an error mentioning "no roles"'
+      );
+    }
+    ok(threw, 'Expected RoleRequired() to throw');
+  });
+
   it('should return 401 when ctx.user is null.', () => {
     const hookFn = getHookFunction(RoleRequired(UserRole.ADMIN));
     const ctx = makeContextWithUser(null);

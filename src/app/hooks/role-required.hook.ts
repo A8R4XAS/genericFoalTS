@@ -20,6 +20,10 @@ import { User, UserRole } from '../entities';
  * @param roles - One or more roles that are permitted to access the route.
  */
 export function RoleRequired(...roles: UserRole[]): HookDecorator {
+  if (roles.length === 0) {
+    throw new Error('RoleRequired called with no roles. Provide at least one UserRole.');
+  }
+
   return Hook((ctx: Context) => {
     const user = ctx.user as User | null;
 
