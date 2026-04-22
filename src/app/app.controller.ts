@@ -3,6 +3,7 @@ import {
   Context,
   HttpResponse,
   HttpResponseBadRequest,
+  HttpResponseClientError,
   HttpResponseConflict,
   HttpResponseForbidden,
   HttpResponseInternalServerError,
@@ -17,6 +18,21 @@ import { ZodError } from 'zod';
 
 import { ApiController, AuthController } from './controllers';
 import { AppError, ValidationError } from './errors';
+
+/**
+ * Concrete HttpResponse subclass for client-error status codes that do not
+ * have a dedicated FoalTS response class (e.g. 418, 422, 429…).
+ * The `statusCode` must be provided via the constructor.
+ */
+class DynamicClientErrorResponse extends HttpResponseClientError {
+  readonly statusCode: number;
+  readonly statusMessage: string = 'Error';
+
+  constructor(body: unknown, code: number) {
+    super(body);
+    this.statusCode = code;
+  }
+}
 
 export class AppController implements IAppController {
   @dependency
@@ -61,7 +77,10 @@ export class AppController implements IAppController {
     }
 
     // ── Known operational errors (AppError subclasses) ───────────────────────
-    if (error instanceof AppError && error.isOperational) {
+    // Only treat as operational when the status code is a client error (< 500).
+    // AppErrors with statusCode >= 500 fall through to the unexpected-error path
+    // so their messages are never leaked to clients.
+    if (error instanceof AppError && error.isOperational && error.statusCode < 500) {
       this.logger.warn(error.message, {
         errorName: error.name,
         statusCode: error.statusCode,
@@ -113,7 +132,7 @@ export class AppController implements IAppController {
       case 409:
         return new HttpResponseConflict(body);
       default:
-        return new HttpResponseInternalServerError(body);
+        return new DynamicClientErrorResponse(body, statusCode);
     }
   }
 }

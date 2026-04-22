@@ -220,6 +220,13 @@ describe('AppController.handleError', () => {
     ok(isHttpResponseConflict(response), 'Expected HttpResponseConflict');
   });
 
+  // ── Unmapped AppError status code ─────────────────────────────────────────
+  it('should preserve an unmapped 4xx status code (e.g. 418).', async () => {
+    const err = new AppError(418, "I'm a teapot"); // eslint-disable-line @typescript-eslint/quotes
+    const response = await controller.handleError(err, makeCtx());
+    strictEqual(response.statusCode, 418, 'Expected HTTP 418 to be preserved');
+  });
+
   // ── Non-operational AppError ──────────────────────────────────────────────
   it('should return 500 for a non-operational AppError.', async () => {
     const err = new AppError(500, 'programmer mistake', false);
@@ -227,6 +234,16 @@ describe('AppController.handleError', () => {
     ok(isHttpResponseInternalServerError(response), 'Expected HttpResponseInternalServerError');
     const body = response.body as Record<string, unknown>;
     strictEqual(body['error'], 'Internal Server Error');
+  });
+
+  // ── 5xx AppError with isOperational=true should NOT expose message ────────
+  it('should return 500 and hide message for a 5xx AppError even when isOperational=true.', async () => {
+    const err = new AppError(500, 'DB connection failed'); // isOperational defaults to true
+    const response = await controller.handleError(err, makeCtx());
+    ok(isHttpResponseInternalServerError(response), 'Expected HttpResponseInternalServerError');
+    const body = response.body as Record<string, unknown>;
+    strictEqual(body['error'], 'Internal Server Error', 'Message must not leak for 5xx AppError');
+    strictEqual(body['message'], undefined);
   });
 
   // ── Generic Error ─────────────────────────────────────────────────────────
