@@ -113,7 +113,7 @@ export class AppController implements IAppController {
       case 409:
         return new HttpResponseConflict(body);
       default:
-        return new HttpResponseInternalServerError(body);
+        return new HttpResponse(body, { statusCode });
     }
   }
 }
