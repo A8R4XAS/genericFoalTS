@@ -1,2 +1,2 @@
 // Helper utilities exports.
-export {};
+export { validateBody } from './validate-body';

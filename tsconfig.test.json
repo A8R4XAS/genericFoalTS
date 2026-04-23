@@ -1,8 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": [
-    "src/app/**/*.ts",
-    "src/scripts/*.ts",
-    "src/test.ts"
-  ]
+  "include": ["src/app/**/*.ts", "src/utils/**/*.ts", "src/scripts/*.ts", "src/test.ts"]
 }
