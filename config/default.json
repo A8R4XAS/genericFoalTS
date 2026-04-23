@@ -20,5 +20,10 @@
   "app": {
     "baseUrl": "env(APP_BASE_URL)",
     "frontendBaseUrl": "env(APP_FRONTEND_BASE_URL)"
+  },
+  "logger": {
+    "requestLogger": {
+      "format": "json"
+    }
   }
 }

@@ -1,2 +1,2 @@
 // Custom middleware exports.
-export {};
+export { RequestLogger } from './request-logger.middleware';
