@@ -149,6 +149,71 @@ describe('RequestLogger middleware', () => {
       ok(!('requestBody' in entry), 'requestBody should not be present for null body');
     });
 
+    it('should redact refreshToken in the request body.', () => {
+      const hookFn = getHookFunction(RequestLogger());
+      const ctx = makeContext({
+        method: 'POST',
+        url: '/api/auth/refresh',
+        body: { refreshToken: 'eyJhbGciOiJIUzI1NiJ9.payload.signature' },
+      });
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+
+      postHook(new HttpResponseOK());
+
+      const entry = JSON.parse(logOutput[0]);
+      strictEqual(entry.requestBody.refreshToken, '[REDACTED]');
+    });
+
+    it('should mask a hex verification/reset token in the URL path.', () => {
+      const token = 'a'.repeat(64);
+      const hookFn = getHookFunction(RequestLogger());
+      const ctx = makeContext({ method: 'GET', url: `/api/auth/verify/${token}` });
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+
+      postHook(new HttpResponseOK());
+
+      const entry = JSON.parse(logOutput[0]);
+      ok(!entry.url.includes(token), 'Raw token must not appear in logged URL');
+      ok(entry.url.includes('[REDACTED]'), 'URL should contain [REDACTED]');
+    });
+
+    it('should mask a JWT-like segment in the URL path.', () => {
+      const segment = 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjF9.SomeSignature';
+      const hookFn = getHookFunction(RequestLogger());
+      const ctx = makeContext({ method: 'POST', url: `/api/auth/reset-password/${segment}` });
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+
+      postHook(new HttpResponseOK());
+
+      const entry = JSON.parse(logOutput[0]);
+      ok(!entry.url.includes(segment), 'JWT token must not appear in logged URL');
+      ok(entry.url.includes('[REDACTED]'), 'URL should contain [REDACTED]');
+    });
+
+    it('should redact query strings from the URL.', () => {
+      const hookFn = getHookFunction(RequestLogger());
+      const ctx = makeContext({ method: 'GET', url: '/api/search?q=secret&token=abc123' });
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+
+      postHook(new HttpResponseOK());
+
+      const entry = JSON.parse(logOutput[0]);
+      ok(!entry.url.includes('secret'), 'Query params must not appear in logged URL');
+      ok(!entry.url.includes('abc123'), 'Query params must not appear in logged URL');
+      ok(entry.url.includes('?[REDACTED]'), 'URL should show ?[REDACTED]');
+    });
+
+    it('should not mask short non-token path segments.', () => {
+      const hookFn = getHookFunction(RequestLogger());
+      const ctx = makeContext({ method: 'GET', url: '/api/auth/profile' });
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+
+      postHook(new HttpResponseOK());
+
+      const entry = JSON.parse(logOutput[0]);
+      strictEqual(entry.url, '/api/auth/profile');
+    });
+
     it('should redact sensitive fields nested inside objects.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({
@@ -170,10 +235,17 @@ describe('RequestLogger middleware', () => {
     let originalConfigGet: typeof Config.get;
 
     beforeEach(() => {
-      originalConfigGet = Config.get.bind(Config);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      originalConfigGet = Config.get;
       Config.get = (key: string, type?: any, defaultValue?: any) => {
         if (key === 'logger.requestLogger.format') return 'text';
-        return originalConfigGet(key, type, defaultValue);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return (originalConfigGet as (...args: unknown[]) => unknown).call(
+          Config,
+          key,
+          type,
+          defaultValue
+        );
       };
     });
 

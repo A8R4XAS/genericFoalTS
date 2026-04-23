@@ -6,7 +6,13 @@ import { Config, Context, Hook, HookDecorator, HttpResponse } from '@foal/core';
 import { User } from '../app/entities';
 
 /** Fields that are always redacted from logged request bodies. */
-const SENSITIVE_FIELDS = ['password', 'passwordConfirm', 'currentPassword', 'newPassword'];
+const SENSITIVE_FIELDS = [
+  'password',
+  'passwordConfirm',
+  'currentPassword',
+  'newPassword',
+  'refreshToken',
+];
 
 /**
  * Recursively remove sensitive fields (e.g. passwords) from a request-body object.
@@ -30,17 +36,41 @@ function sanitizeBody(body: unknown): unknown {
 }
 
 /**
+ * Sanitize a URL before logging:
+ *  - Replaces the query string with `?[REDACTED]` to prevent leaking sensitive query params.
+ *  - Masks path segments that look like one-time tokens:
+ *    - Long hex strings (≥ 32 hex characters, e.g. email-verification / password-reset tokens)
+ *    - JWT-like segments (three base64url parts separated by dots)
+ */
+function sanitizeUrl(url: string): string {
+  const qIndex = url.indexOf('?');
+  const path = qIndex >= 0 ? url.slice(0, qIndex) : url;
+  const queryPart = qIndex >= 0 ? '?[REDACTED]' : '';
+
+  const maskedPath = path
+    .split('/')
+    .map(segment => {
+      if (/^[0-9a-f]{32,}$/i.test(segment)) return '[REDACTED]';
+      if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(segment)) return '[REDACTED]';
+      return segment;
+    })
+    .join('/');
+
+  return maskedPath + queryPart;
+}
+
+/**
  * Request-Logger middleware (FoalTS Hook).
  *
  * Logs every incoming request together with the corresponding response.
  * Logged fields:
  *  - timestamp
  *  - HTTP method
- *  - URL / path
+ *  - URL / path (sanitized – token-bearing segments and query strings redacted)
  *  - status code
  *  - response time (ms)
  *  - userId (when an authenticated user is present on `ctx.user`)
- *  - requestBody (sanitised – password fields replaced with "[REDACTED]")
+ *  - requestBody (sanitised – password and token fields replaced with "[REDACTED]")
  *
  * The output format is controlled by the config key `logger.requestLogger.format`:
  *  - `"json"` (default) – one JSON object per line (structured / machine-readable)
@@ -56,8 +86,9 @@ export function RequestLogger(): HookDecorator {
 
       const req = ctx.request as Record<string, unknown>;
       const method: string = (req['method'] as string | undefined) ?? 'UNKNOWN';
-      const url: string =
+      const rawUrl: string =
         (req['url'] as string | undefined) ?? (req['path'] as string | undefined) ?? 'UNKNOWN';
+      const url = sanitizeUrl(rawUrl);
       const statusCode: number = response.statusCode;
       const userId: number | string | undefined = ctx.user ? (ctx.user as User).id : undefined;
       const requestBody = sanitizeBody(req['body']);
