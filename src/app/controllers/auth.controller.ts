@@ -44,8 +44,9 @@ export class AuthController {
    */
   @Post('/register')
   async register(ctx: Context) {
-    const { data: validatedData, error } = validateBody(registerSchema, ctx.request.body);
-    if (error) return error;
+    const validationResult = validateBody(registerSchema, ctx.request.body);
+    if (validationResult.error) return validationResult.error;
+    const validatedData = validationResult.data;
 
     // Check if user with this email already exists
     const existingUser = await User.findOne({
