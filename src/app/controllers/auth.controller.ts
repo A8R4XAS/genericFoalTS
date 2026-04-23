@@ -129,8 +129,9 @@ export class AuthController {
    */
   @Post('/resend-verification')
   async resendVerification(ctx: Context) {
-    const { data: validatedData, error } = validateBody(resendVerificationSchema, ctx.request.body);
-    if (error) return error;
+    const result = validateBody(resendVerificationSchema, ctx.request.body);
+    if (result.error) return result.error;
+    const validatedData = result.data;
 
     const user = await User.findOne({ where: { email: validatedData.email } });
 
@@ -164,8 +165,9 @@ export class AuthController {
    */
   @Post('/login')
   async login(ctx: Context) {
-    const { data: validatedData, error } = validateBody(loginSchema, ctx.request.body);
-    if (error) return error;
+    const result = validateBody(loginSchema, ctx.request.body);
+    if (result.error) return result.error;
+    const validatedData = result.data;
 
     const user = await User.findOneBy({ email: validatedData.email });
 
@@ -209,8 +211,9 @@ export class AuthController {
    */
   @Post('/refresh')
   async refresh(ctx: Context) {
-    const { data: validatedData, error } = validateBody(refreshTokenSchema, ctx.request.body);
-    if (error) return error;
+    const result = validateBody(refreshTokenSchema, ctx.request.body);
+    if (result.error) return result.error;
+    const validatedData = result.data;
 
     const secret = Config.getOrThrow('jwt.secret', 'string');
     const accessExpiresIn = Config.get('jwt.accessTokenExpiresIn', 'string', '15m');
@@ -245,8 +248,9 @@ export class AuthController {
    */
   @Post('/forgot-password')
   async forgotPassword(ctx: Context) {
-    const { data: validatedData, error } = validateBody(forgotPasswordSchema, ctx.request.body);
-    if (error) return error;
+    const result = validateBody(forgotPasswordSchema, ctx.request.body);
+    if (result.error) return result.error;
+    const validatedData = result.data;
 
     const user = await User.findOne({ where: { email: validatedData.email } });
 
@@ -283,8 +287,9 @@ export class AuthController {
    */
   @Post('/reset-password/:token')
   async resetPassword(ctx: Context) {
-    const { data: validatedData, error } = validateBody(resetPasswordSchema, ctx.request.body);
-    if (error) return error;
+    const result = validateBody(resetPasswordSchema, ctx.request.body);
+    if (result.error) return result.error;
+    const validatedData = result.data;
 
     const { token } = ctx.request.params as { token: string };
 
