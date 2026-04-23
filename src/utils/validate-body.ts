@@ -13,9 +13,9 @@ type ValidationResult<T> = ValidationSuccess<T> | ValidationFailure;
  * Any non-Zod error is re-thrown so it bubbles up as an unexpected server error.
  *
  * @example
- * const { data, error } = validateBody(loginSchema, ctx.request.body);
- * if (error) return error;
- * // data is fully typed here
+ * const result = validateBody(loginSchema, ctx.request.body);
+ * if (result.error) return result.error;
+ * // result.data is fully typed here
  */
 export function validateBody<T>(schema: ZodSchema<T>, body: unknown): ValidationResult<T> {
   try {
