@@ -257,10 +257,37 @@
         font-family: monospace;
         font-weight: 400;
       }
+
+      /* ── Dev-only warning banner ── */
+      .dev-warning {
+        background: #450a0a;
+        border: 1px solid #b91c1c;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+        font-size: 0.82rem;
+        color: #fca5a5;
+        line-height: 1.5;
+      }
+
+      .dev-warning strong {
+        color: #f87171;
+      }
     </style>
   </head>
 
   <body>
+    <!-- ⚠️  DEV-ONLY WARNING — must be removed / blocked before production deployment -->
+    <div class="dev-warning" id="dev-warning">
+      <strong>⚠️ Development use only.</strong> This page is a test harness — it must
+      <strong>not</strong> be accessible in a production environment. Ensure
+      <code>public/test.html</code> is removed or blocked (e.g., via a server-side route guard
+      or by excluding it from production artifacts) before deploying.
+    </div>
+
     <h1>FoalTS – Test Environment</h1>
     <p class="subtitle">
       Quick UI to exercise auth endpoints, JWT tokens, middleware, and request logging.
@@ -362,8 +389,8 @@
       <div class="card">
         <h2>Forgot Password <span class="endpoint-tag">POST /api/auth/forgot-password</span></h2>
         <p class="hint">
-          The server will log the raw reset token (if no mail service is configured, check console
-          output).
+          The reset token is sent to the user's email address. Retrieve it from your configured
+          email provider or test inbox, then paste it in the "Reset Password" panel below.
         </p>
         <div>
           <label>Email</label>
@@ -384,7 +411,7 @@
           Reset Password <span class="endpoint-tag">POST /api/auth/reset-password/:token</span>
         </h2>
         <div>
-          <label>Reset token (from server log / email)</label>
+          <label>Reset token (from email)</label>
           <input id="reset-token" type="text" placeholder="64-char hex reset token" />
         </div>
         <div>
@@ -450,22 +477,59 @@
         el.className = 'response' + (isError ? ' error' : '');
       }
 
+      function sanitizeLogUrl(url) {
+        const qIndex = url.indexOf('?');
+        const path = qIndex >= 0 ? url.slice(0, qIndex) : url;
+        const queryPart = qIndex >= 0 ? '?[REDACTED]' : '';
+        const maskedPath = path
+          .split('/')
+          .map(segment => {
+            if (/^[0-9a-f]{32,}$/i.test(segment)) return '[REDACTED]';
+            if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(segment)) return '[REDACTED]';
+            return segment;
+          })
+          .join('/');
+        return maskedPath + queryPart;
+      }
+
       function addLog(method, url, status, durationMs) {
         const ts = new Date().toLocaleTimeString();
+        const safeUrl = sanitizeLogUrl(url);
         const cls =
           status >= 500 ? 'log-5xx' : status >= 400 ? 'log-4xx' : status >= 200 ? 'log-2xx' : 'log-ts';
-        const entry = `<span class="log-ts">${ts}</span>  <span class="log-method">${method}</span>  ${url}  <span class="${cls}">${status}</span>  ${durationMs}ms`;
-        logEntries.unshift(entry);
+        logEntries.unshift({ ts, method, safeUrl, status, durationMs, cls });
+
         const out = document.getElementById('log-output');
-        out.innerHTML = logEntries
-          .slice(0, 100)
-          .map(e => `<div class="log-entry">${e}</div>`)
-          .join('');
+        out.textContent = '';
+        logEntries.slice(0, 100).forEach(e => {
+          const div = document.createElement('div');
+          div.className = 'log-entry';
+
+          const tsSpan = document.createElement('span');
+          tsSpan.className = 'log-ts';
+          tsSpan.textContent = e.ts;
+
+          const methodSpan = document.createElement('span');
+          methodSpan.className = 'log-method';
+          methodSpan.textContent = e.method;
+
+          const statusSpan = document.createElement('span');
+          statusSpan.className = e.cls;
+          statusSpan.textContent = String(e.status);
+
+          div.appendChild(tsSpan);
+          div.appendChild(document.createTextNode('  '));
+          div.appendChild(methodSpan);
+          div.appendChild(document.createTextNode('  ' + e.safeUrl + '  '));
+          div.appendChild(statusSpan);
+          div.appendChild(document.createTextNode('  ' + e.durationMs + 'ms'));
+          out.appendChild(div);
+        });
       }
 
       function clearLog() {
         logEntries.splice(0);
-        document.getElementById('log-output').innerHTML = 'log cleared';
+        document.getElementById('log-output').textContent = 'log cleared';
       }
 
       async function apiFetch(method, url, body, headers) {
