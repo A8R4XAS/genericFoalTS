@@ -8,6 +8,7 @@ import {
   getHookFunction,
   HttpResponse,
   HttpResponseOK,
+  Logger,
   ServiceManager,
 } from '@foal/core';
 
@@ -33,25 +34,27 @@ function makeContext(overrides: Record<string, unknown> = {}): Context {
 
 describe('RequestLogger middleware', () => {
   let logOutput: string[];
-  let originalLog: typeof console.log;
+  let services: ServiceManager;
 
   beforeEach(() => {
     logOutput = [];
-    originalLog = console.log;
-    console.log = (...args: unknown[]) => {
-      logOutput.push(args.map(String).join(' '));
-    };
-  });
-
-  afterEach(() => {
-    console.log = originalLog;
+    services = new ServiceManager();
+    services.set(Logger, {
+      info: (msg: string) => {
+        logOutput.push(msg);
+      },
+      debug: (_msg: string) => {},
+      warn: (_msg: string) => {},
+      error: (_msg: string) => {},
+      log: (_level: string, _msg: string) => {},
+    });
   });
 
   it('should not block the request (hook returns a post-hook function, not an HttpResponse).', () => {
     const hookFn = getHookFunction(RequestLogger());
     const ctx = makeContext();
 
-    const result = hookFn(ctx, new ServiceManager());
+    const result = hookFn(ctx, services);
 
     ok(typeof result === 'function', 'Hook should return a post-hook function');
   });
@@ -60,7 +63,7 @@ describe('RequestLogger middleware', () => {
     it('should log method, url, statusCode, and responseTime.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'POST', url: '/api/auth/login' });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -80,7 +83,7 @@ describe('RequestLogger middleware', () => {
       user.id = 42;
       user.role = UserRole.USER;
       ctx.user = user;
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -91,7 +94,7 @@ describe('RequestLogger middleware', () => {
     it('should omit userId when ctx.user is not set.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext();
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -106,7 +109,7 @@ describe('RequestLogger middleware', () => {
         url: '/api/auth/login',
         body: { email: 'test@example.com', password: 'secret123' },
       });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -127,7 +130,7 @@ describe('RequestLogger middleware', () => {
           firstName: 'Alice',
         },
       });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -141,7 +144,7 @@ describe('RequestLogger middleware', () => {
     it('should omit requestBody when body is null.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ body: null });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -156,7 +159,7 @@ describe('RequestLogger middleware', () => {
         url: '/api/auth/refresh',
         body: { refreshToken: 'eyJhbGciOiJIUzI1NiJ9.payload.signature' },
       });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -168,7 +171,7 @@ describe('RequestLogger middleware', () => {
       const token = 'a'.repeat(64);
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'GET', url: `/api/auth/verify/${token}` });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -181,7 +184,7 @@ describe('RequestLogger middleware', () => {
       const segment = 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOjF9.SomeSignature';
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'POST', url: `/api/auth/reset-password/${segment}` });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -193,7 +196,7 @@ describe('RequestLogger middleware', () => {
     it('should redact query strings from the URL.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'GET', url: '/api/search?q=secret&token=abc123' });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -206,7 +209,7 @@ describe('RequestLogger middleware', () => {
     it('should not mask short non-token path segments.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'GET', url: '/api/auth/profile' });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -221,13 +224,61 @@ describe('RequestLogger middleware', () => {
         url: '/api/auth/change-password',
         body: { user: { email: 'a@b.com', password: 'nested-secret' } },
       });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
       const entry = JSON.parse(logOutput[0]);
       strictEqual(entry.requestBody.user.email, 'a@b.com');
       strictEqual(entry.requestBody.user.password, '[REDACTED]');
+    });
+
+    it('should not log when logger.requestLogger.enabled is false.', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalGet = Config.get;
+      Config.get = (key: string, type?: any, defaultValue?: any) => {
+        if (key === 'logger.requestLogger.enabled') return false;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return (originalGet as (...args: unknown[]) => unknown).call(
+          Config,
+          key,
+          type,
+          defaultValue
+        );
+      };
+      try {
+        const hookFn = getHookFunction(RequestLogger());
+        const ctx = makeContext();
+        const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
+        postHook(new HttpResponseOK());
+        strictEqual(logOutput.length, 0, 'Nothing should be logged when disabled');
+      } finally {
+        Config.get = originalGet;
+      }
+    });
+
+    it('should not log when settings.logger.logHttpRequests is false.', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalGet = Config.get;
+      Config.get = (key: string, type?: any, defaultValue?: any) => {
+        if (key === 'settings.logger.logHttpRequests') return false;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return (originalGet as (...args: unknown[]) => unknown).call(
+          Config,
+          key,
+          type,
+          defaultValue
+        );
+      };
+      try {
+        const hookFn = getHookFunction(RequestLogger());
+        const ctx = makeContext();
+        const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
+        postHook(new HttpResponseOK());
+        strictEqual(logOutput.length, 0, 'Nothing should be logged when logHttpRequests is false');
+      } finally {
+        Config.get = originalGet;
+      }
     });
   });
 
@@ -256,7 +307,7 @@ describe('RequestLogger middleware', () => {
     it('should log a human-readable line in text format.', () => {
       const hookFn = getHookFunction(RequestLogger());
       const ctx = makeContext({ method: 'GET', url: '/api/', body: null });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -271,7 +322,7 @@ describe('RequestLogger middleware', () => {
       user.id = 7;
       user.role = UserRole.ADMIN;
       ctx.user = user;
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 
@@ -285,7 +336,7 @@ describe('RequestLogger middleware', () => {
         url: '/api/auth/login',
         body: { email: 'a@b.com', password: 'secret' },
       });
-      const postHook = hookFn(ctx, new ServiceManager()) as (r: HttpResponse) => void;
+      const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
 
       postHook(new HttpResponseOK());
 

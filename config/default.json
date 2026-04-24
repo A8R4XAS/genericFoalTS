@@ -23,6 +23,7 @@
   },
   "logger": {
     "requestLogger": {
+      "enabled": true,
       "format": "json"
     }
   }

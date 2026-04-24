@@ -1,6 +1,14 @@
 // std
 // 3p
-import { Config, Context, Hook, HookDecorator, HttpResponse } from '@foal/core';
+import {
+  Config,
+  Context,
+  Hook,
+  HookDecorator,
+  HttpResponse,
+  Logger,
+  ServiceManager,
+} from '@foal/core';
 
 // App
 import { User } from '../app/entities';
@@ -75,12 +83,22 @@ function sanitizeUrl(url: string): string {
  * The output format is controlled by the config key `logger.requestLogger.format`:
  *  - `"json"` (default) – one JSON object per line (structured / machine-readable)
  *  - `"text"` – human-readable single-line string
+ *
+ * Enabling/disabling:
+ *  - `logger.requestLogger.enabled` (default `true`) – set to `false` to disable this middleware
+ *  - `settings.logger.logHttpRequests` (default `true`) – when `false`, logging is also suppressed
+ *    (honoured so environments like e2e that disable FoalTS HTTP logging stay quiet)
  */
 export function RequestLogger(): HookDecorator {
-  return Hook((ctx: Context) => {
+  return Hook((ctx: Context, services: ServiceManager) => {
     const startTime = Date.now();
+    const logger = services.get(Logger);
 
     return (response: HttpResponse) => {
+      const enabled = Config.get('logger.requestLogger.enabled', 'boolean', true);
+      const logHttpRequests = Config.get('settings.logger.logHttpRequests', 'boolean', true);
+      if (!enabled || !logHttpRequests) return;
+
       const duration = Date.now() - startTime;
       const format = Config.get('logger.requestLogger.format', 'string', 'json');
 
@@ -99,7 +117,7 @@ export function RequestLogger(): HookDecorator {
           requestBody !== undefined && requestBody !== null
             ? ` body=${JSON.stringify(requestBody)}`
             : '';
-        console.log(
+        logger.info(
           `[${new Date().toISOString()}] ${method} ${url} ${statusCode} ${duration}ms${userPart}${bodyPart}`
         );
       } else {
@@ -116,7 +134,7 @@ export function RequestLogger(): HookDecorator {
         if (requestBody !== undefined && requestBody !== null) {
           entry.requestBody = requestBody;
         }
-        console.log(JSON.stringify(entry));
+        logger.info(JSON.stringify(entry));
       }
     };
   });
