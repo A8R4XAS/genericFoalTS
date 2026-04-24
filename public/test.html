@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FoalTS – Test Environment</title>
+    <style>
+      /* ── Reset & base ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+        padding: 24px 16px;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #60a5fa;
+        margin-bottom: 4px;
+      }
+
+      .subtitle {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-bottom: 24px;
+      }
+
+      /* ── Layout ── */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      /* ── Cards ── */
+      .card {
+        background: #1e2433;
+        border: 1px solid #2d3748;
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .card h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #93c5fd;
+        border-bottom: 1px solid #2d3748;
+        padding-bottom: 8px;
+        margin-bottom: 4px;
+      }
+
+      .card label {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .card input,
+      .card textarea {
+        width: 100%;
+        background: #0f1117;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        color: #e2e8f0;
+        padding: 7px 10px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .card input:focus,
+      .card textarea:focus {
+        border-color: #60a5fa;
+      }
+
+      .card textarea {
+        resize: vertical;
+        min-height: 56px;
+        font-family: monospace;
+        font-size: 0.78rem;
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition:
+          opacity 0.15s,
+          transform 0.1s;
+      }
+
+      .btn:hover {
+        opacity: 0.88;
+      }
+
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      .btn-primary {
+        background: #3b82f6;
+        color: #fff;
+      }
+
+      .btn-success {
+        background: #22c55e;
+        color: #fff;
+      }
+
+      .btn-warning {
+        background: #f59e0b;
+        color: #fff;
+      }
+
+      .btn-danger {
+        background: #ef4444;
+        color: #fff;
+      }
+
+      .btn-ghost {
+        background: #2d3748;
+        color: #e2e8f0;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* ── Response box ── */
+      .response {
+        background: #0f1117;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-family: monospace;
+        font-size: 0.76rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 180px;
+        overflow-y: auto;
+        color: #a3e635;
+        min-height: 40px;
+      }
+
+      .response.error {
+        color: #f87171;
+      }
+
+      /* ── Log panel ── */
+      #log-panel {
+        grid-column: 1 / -1;
+      }
+
+      #log-output {
+        max-height: 320px;
+        font-size: 0.74rem;
+      }
+
+      .log-entry {
+        border-bottom: 1px solid #1e2433;
+        padding: 4px 0;
+      }
+
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+
+      .log-ts {
+        color: #64748b;
+      }
+
+      .log-method {
+        font-weight: 700;
+      }
+
+      .log-2xx {
+        color: #4ade80;
+      }
+
+      .log-4xx {
+        color: #fb923c;
+      }
+
+      .log-5xx {
+        color: #f87171;
+      }
+
+      /* ── Token display ── */
+      #token-box {
+        background: #0f1117;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 0.74rem;
+        word-break: break-all;
+        font-family: monospace;
+        color: #c084fc;
+        max-height: 120px;
+        overflow-y: auto;
+      }
+
+      /* ── Helper text ── */
+      .hint {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin-top: -4px;
+      }
+
+      /* ── Status badge ── */
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-left: 8px;
+      }
+
+      .badge-ok {
+        background: #16a34a22;
+        color: #4ade80;
+        border: 1px solid #16a34a55;
+      }
+
+      .badge-err {
+        background: #dc262622;
+        color: #f87171;
+        border: 1px solid #dc262655;
+      }
+
+      /* ── Section header with endpoint label ── */
+      .endpoint-tag {
+        font-size: 0.68rem;
+        color: #64748b;
+        font-family: monospace;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>FoalTS – Test Environment</h1>
+    <p class="subtitle">
+      Quick UI to exercise auth endpoints, JWT tokens, middleware, and request logging.
+    </p>
+
+    <div class="grid">
+      <!-- ── REGISTER ── -->
+      <div class="card">
+        <h2>Register <span class="endpoint-tag">POST /api/auth/register</span></h2>
+        <div>
+          <label>First name</label>
+          <input id="reg-firstName" type="text" placeholder="Alice" value="Alice" />
+        </div>
+        <div>
+          <label>Last name</label>
+          <input id="reg-lastName" type="text" placeholder="Smith" value="Smith" />
+        </div>
+        <div>
+          <label>Email</label>
+          <input id="reg-email" type="email" placeholder="alice@example.com" value="alice@example.com" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="reg-password" type="password" placeholder="Password123" value="Password123" />
+        </div>
+        <button class="btn btn-primary" onclick="doRegister()">Register</button>
+        <div class="response" id="reg-response">— response appears here —</div>
+      </div>
+
+      <!-- ── VERIFY EMAIL ── -->
+      <div class="card">
+        <h2>Verify Email <span class="endpoint-tag">GET /api/auth/verify/:token</span></h2>
+        <p class="hint">
+          After registration the server logs a verification token. Paste it here (or check your
+          email if a mail service is configured).
+        </p>
+        <div>
+          <label>Verification token</label>
+          <input id="verify-token" type="text" placeholder="64-char hex token from server log" />
+        </div>
+        <button class="btn btn-success" onclick="doVerify()">Verify Email</button>
+        <div class="response" id="verify-response">— response appears here —</div>
+      </div>
+
+      <!-- ── LOGIN ── -->
+      <div class="card">
+        <h2>Login <span class="endpoint-tag">POST /api/auth/login</span></h2>
+        <div>
+          <label>Email</label>
+          <input id="login-email" type="email" placeholder="alice@example.com" value="alice@example.com" />
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="login-password" type="password" placeholder="Password123" value="Password123" />
+        </div>
+        <button class="btn btn-primary" onclick="doLogin()">Login → store tokens</button>
+        <div class="response" id="login-response">— response appears here —</div>
+        <div>
+          <label>Stored access token</label>
+          <div id="token-box">no token yet</div>
+        </div>
+      </div>
+
+      <!-- ── REFRESH TOKEN ── -->
+      <div class="card">
+        <h2>Refresh Token <span class="endpoint-tag">POST /api/auth/refresh</span></h2>
+        <p class="hint">Uses the refresh token stored after login.</p>
+        <button class="btn btn-warning" onclick="doRefresh()">Refresh Access Token</button>
+        <div class="response" id="refresh-response">— response appears here —</div>
+      </div>
+
+      <!-- ── PROTECTED ROUTES (middleware test) ── -->
+      <div class="card">
+        <h2>Protected Routes <span class="endpoint-tag">JWT middleware</span></h2>
+        <p class="hint">
+          All three endpoints require a valid Bearer token. "Admin dashboard" also requires the
+          ADMIN role + MANAGE_USERS permission.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="doProtected('/api/', 'protected-response')">
+            GET /api/
+          </button>
+          <button class="btn btn-success" onclick="doProtected('/api/profile', 'protected-response')">
+            GET /api/profile
+          </button>
+          <button class="btn btn-danger" onclick="doProtected('/api/admin', 'protected-response')">
+            GET /api/admin (admin only)
+          </button>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="doProtectedNoToken('/api/profile', 'protected-response')">
+            GET /api/profile (no token → 401)
+          </button>
+        </div>
+        <div class="response" id="protected-response">— response appears here —</div>
+      </div>
+
+      <!-- ── FORGOT PASSWORD ── -->
+      <div class="card">
+        <h2>Forgot Password <span class="endpoint-tag">POST /api/auth/forgot-password</span></h2>
+        <p class="hint">
+          The server will log the raw reset token (if no mail service is configured, check console
+          output).
+        </p>
+        <div>
+          <label>Email</label>
+          <input
+            id="forgot-email"
+            type="email"
+            placeholder="alice@example.com"
+            value="alice@example.com"
+          />
+        </div>
+        <button class="btn btn-warning" onclick="doForgotPassword()">Send Reset Email</button>
+        <div class="response" id="forgot-response">— response appears here —</div>
+      </div>
+
+      <!-- ── RESET PASSWORD ── -->
+      <div class="card">
+        <h2>
+          Reset Password <span class="endpoint-tag">POST /api/auth/reset-password/:token</span>
+        </h2>
+        <div>
+          <label>Reset token (from server log / email)</label>
+          <input id="reset-token" type="text" placeholder="64-char hex reset token" />
+        </div>
+        <div>
+          <label>New password</label>
+          <input id="reset-password" type="password" placeholder="NewPassword123" value="NewPassword123" />
+        </div>
+        <button class="btn btn-danger" onclick="doResetPassword()">Reset Password</button>
+        <div class="response" id="reset-response">— response appears here —</div>
+      </div>
+
+      <!-- ── RESEND VERIFICATION ── -->
+      <div class="card">
+        <h2>
+          Resend Verification
+          <span class="endpoint-tag">POST /api/auth/resend-verification</span>
+        </h2>
+        <div>
+          <label>Email</label>
+          <input
+            id="resend-email"
+            type="email"
+            placeholder="alice@example.com"
+            value="alice@example.com"
+          />
+        </div>
+        <button class="btn btn-warning" onclick="doResendVerification()">Resend Email</button>
+        <div class="response" id="resend-response">— response appears here —</div>
+      </div>
+
+      <!-- ── REQUEST LOG ── -->
+      <div class="card" id="log-panel">
+        <h2>
+          Request Log
+          <span class="endpoint-tag">client-side — mirrors server console</span>
+          <button
+            class="btn btn-ghost"
+            style="float: right; padding: 2px 10px; font-size: 0.72rem"
+            onclick="clearLog()"
+          >
+            clear
+          </button>
+        </h2>
+        <p class="hint">
+          Every API call made from this page is recorded below. The server-side
+          <span class="endpoint-tag">RequestLogger</span> middleware logs the same requests to the
+          process console (in JSON or text format depending on config).
+        </p>
+        <div class="response" id="log-output">waiting for requests…</div>
+      </div>
+    </div>
+
+    <script>
+      /* ── State ── */
+      let accessToken = null;
+      let refreshTokenValue = null;
+      const logEntries = [];
+
+      /* ── Utility ── */
+      function showResponse(id, data, isError) {
+        const el = document.getElementById(id);
+        const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        el.textContent = text;
+        el.className = 'response' + (isError ? ' error' : '');
+      }
+
+      function addLog(method, url, status, durationMs) {
+        const ts = new Date().toLocaleTimeString();
+        const cls =
+          status >= 500 ? 'log-5xx' : status >= 400 ? 'log-4xx' : status >= 200 ? 'log-2xx' : 'log-ts';
+        const entry = `<span class="log-ts">${ts}</span>  <span class="log-method">${method}</span>  ${url}  <span class="${cls}">${status}</span>  ${durationMs}ms`;
+        logEntries.unshift(entry);
+        const out = document.getElementById('log-output');
+        out.innerHTML = logEntries
+          .slice(0, 100)
+          .map(e => `<div class="log-entry">${e}</div>`)
+          .join('');
+      }
+
+      function clearLog() {
+        logEntries.splice(0);
+        document.getElementById('log-output').innerHTML = 'log cleared';
+      }
+
+      async function apiFetch(method, url, body, headers) {
+        const t0 = Date.now();
+        const opts = {
+          method,
+          headers: { 'Content-Type': 'application/json', ...(headers || {}) },
+        };
+        if (body !== undefined) opts.body = JSON.stringify(body);
+
+        let res, json;
+        try {
+          res = await fetch(url, opts);
+          const raw = await res.text();
+          try {
+            json = JSON.parse(raw);
+          } catch {
+            json = raw;
+          }
+        } catch (err) {
+          addLog(method, url, 0, Date.now() - t0);
+          throw err;
+        }
+
+        addLog(method, url, res.status, Date.now() - t0);
+        return { status: res.status, body: json, ok: res.ok };
+      }
+
+      /* ── Auth helpers ── */
+      function bearerHeaders() {
+        return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+      }
+
+      function updateTokenBox() {
+        const box = document.getElementById('token-box');
+        box.textContent = accessToken
+          ? `ACCESS TOKEN:\n${accessToken}\n\nREFRESH TOKEN:\n${refreshTokenValue}`
+          : 'no token yet';
+      }
+
+      /* ── Handlers ── */
+      async function doRegister() {
+        try {
+          const r = await apiFetch('POST', '/api/auth/register', {
+            firstName: document.getElementById('reg-firstName').value,
+            lastName: document.getElementById('reg-lastName').value,
+            email: document.getElementById('reg-email').value,
+            password: document.getElementById('reg-password').value,
+          });
+          showResponse('reg-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('reg-response', String(e), true);
+        }
+      }
+
+      async function doVerify() {
+        const token = document.getElementById('verify-token').value.trim();
+        if (!token) {
+          showResponse('verify-response', 'Please enter a verification token.', true);
+          return;
+        }
+        try {
+          const r = await apiFetch('GET', `/api/auth/verify/${token}`);
+          showResponse('verify-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('verify-response', String(e), true);
+        }
+      }
+
+      async function doLogin() {
+        try {
+          const r = await apiFetch('POST', '/api/auth/login', {
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value,
+          });
+          showResponse('login-response', r.body, !r.ok);
+          if (r.ok && r.body.accessToken) {
+            accessToken = r.body.accessToken;
+            refreshTokenValue = r.body.refreshToken;
+            updateTokenBox();
+          }
+        } catch (e) {
+          showResponse('login-response', String(e), true);
+        }
+      }
+
+      async function doRefresh() {
+        if (!refreshTokenValue) {
+          showResponse('refresh-response', 'No refresh token stored. Login first.', true);
+          return;
+        }
+        try {
+          const r = await apiFetch('POST', '/api/auth/refresh', {
+            refreshToken: refreshTokenValue,
+          });
+          showResponse('refresh-response', r.body, !r.ok);
+          if (r.ok && r.body.accessToken) {
+            accessToken = r.body.accessToken;
+            updateTokenBox();
+          }
+        } catch (e) {
+          showResponse('refresh-response', String(e), true);
+        }
+      }
+
+      async function doProtected(url, responseId) {
+        try {
+          const r = await apiFetch('GET', url, undefined, bearerHeaders());
+          showResponse(responseId, r.body, !r.ok);
+        } catch (e) {
+          showResponse(responseId, String(e), true);
+        }
+      }
+
+      async function doProtectedNoToken(url, responseId) {
+        try {
+          const r = await apiFetch('GET', url);
+          showResponse(responseId, r.body, !r.ok);
+        } catch (e) {
+          showResponse(responseId, String(e), true);
+        }
+      }
+
+      async function doForgotPassword() {
+        try {
+          const r = await apiFetch('POST', '/api/auth/forgot-password', {
+            email: document.getElementById('forgot-email').value,
+          });
+          showResponse('forgot-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('forgot-response', String(e), true);
+        }
+      }
+
+      async function doResetPassword() {
+        const token = document.getElementById('reset-token').value.trim();
+        if (!token) {
+          showResponse('reset-response', 'Please enter a reset token.', true);
+          return;
+        }
+        try {
+          const r = await apiFetch(
+            'POST',
+            `/api/auth/reset-password/${token}`,
+            { password: document.getElementById('reset-password').value }
+          );
+          showResponse('reset-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('reset-response', String(e), true);
+        }
+      }
+
+      async function doResendVerification() {
+        try {
+          const r = await apiFetch('POST', '/api/auth/resend-verification', {
+            email: document.getElementById('resend-email').value,
+          });
+          showResponse('resend-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('resend-response', String(e), true);
+        }
+      }
+    </script>
+  </body>
+</html>
