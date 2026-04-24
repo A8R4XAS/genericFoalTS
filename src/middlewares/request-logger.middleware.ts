@@ -70,7 +70,7 @@ function sanitizeUrl(url: string): string {
  *  - status code
  *  - response time (ms)
  *  - userId (when an authenticated user is present on `ctx.user`)
- *  - requestBody (sanitised – password and token fields replaced with "[REDACTED]")
+ *  - requestBody (sanitized – password and token fields replaced with "[REDACTED]")
  *
  * The output format is controlled by the config key `logger.requestLogger.format`:
  *  - `"json"` (default) – one JSON object per line (structured / machine-readable)
