@@ -112,6 +112,17 @@ Die Anwendung nutzt verschiedene Konfigurationsdateien im `config/` Verzeichnis:
 
 Weitere Details zur Datenbank-Konfiguration findest du in [DATABASE_CONFIG.md](DATABASE_CONFIG.md).
 
+### Rate Limiting
+
+Rate Limiting ist über `config/default.json` konfigurierbar:
+
+- `rateLimit.default` – Limits für normale API-Endpunkte
+- `rateLimit.auth` – Limits für Auth-Endpunkte
+- `rateLimit.endpoints.<Controller>.<Methode>` – Endpoint-spezifische Overrides
+
+Bei Überschreitung wird `429 Too Many Requests` zurückgegeben. Zusätzlich werden
+`RateLimit-*` und `X-RateLimit-*` Header in Responses gesetzt.
+
 ## 💻 Entwicklung
 
 ### Development-Server starten

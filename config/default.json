@@ -21,6 +21,28 @@
     "baseUrl": "env(APP_BASE_URL)",
     "frontendBaseUrl": "env(APP_FRONTEND_BASE_URL)"
   },
+  "rateLimit": {
+    "default": {
+      "points": 120,
+      "duration": 60
+    },
+    "auth": {
+      "points": 60,
+      "duration": 60
+    },
+    "endpoints": {
+      "AuthController": {
+        "login": {
+          "points": 15,
+          "duration": 60
+        },
+        "register": {
+          "points": 25,
+          "duration": 60
+        }
+      }
+    }
+  },
   "logger": {
     "requestLogger": {
       "enabled": true,
