@@ -64,7 +64,7 @@ export function Cors(): HookDecorator {
     const method = (req['method'] as string | undefined) ?? '';
     const requestOrigin =
       typeof req['get'] === 'function'
-        ? (req as { get(h: string): string | undefined }).get('Origin')
+        ? ((req as any).get('Origin') as string | undefined)
         : undefined;
 
     /**
