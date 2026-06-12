@@ -11,6 +11,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
   - [📦 Voraussetzungen](#-voraussetzungen)
   - [🚀 Installation](#-installation)
   - [⚙️ Konfiguration](#️-konfiguration)
+    - [Rate Limiting](#rate-limiting)
   - [💻 Entwicklung](#-entwicklung)
     - [Development-Server starten](#development-server-starten)
     - [Hot Reload](#hot-reload)
@@ -114,17 +115,29 @@ Weitere Details zur Datenbank-Konfiguration findest du in [DATABASE_CONFIG.md](D
 
 ### Rate Limiting
 
-Rate Limiting ist über `config/default.json` konfigurierbar:
+Rate Limiting schützt die API, indem es begrenzt, wie viele Anfragen ein einzelner Client
+pro Zeitfenster stellen darf. Wird das Limit überschritten, antwortet der Server mit
+`429 Too Many Requests` und einem `Retry-After`-Header.
 
-- `rateLimit.default` – Limits für normale API-Endpunkte
-- `rateLimit.auth` – Limits für Auth-Endpunkte
-- `rateLimit.endpoints.<Controller>.<Methode>` – Endpoint-spezifische Overrides
+Es gibt zwei vordefinierte Profile:
 
-Bei Überschreitung wird `429 Too Many Requests` zurückgegeben. Zusätzlich werden
-`RateLimit-*` und `X-RateLimit-*` Header in Responses gesetzt.
+| Profil | Verwendung | Standard |
+|--------|-----------|---------|
+| `default` | Normale API-Endpunkte (`ApiController`) | 120 Anfragen / 60 s |
+| `auth` | Auth-Endpunkte (`AuthController`) | 60 Anfragen / 60 s |
 
-Hinweis: Die aktuelle Implementierung nutzt einen In-Memory-Store. Für verteilte
-Deployments (mehrere Instanzen) sollte ein gemeinsamer Store wie Redis genutzt werden.
+Einzelne Endpunkte können über `rateLimit.endpoints` in `config/default.json` mit
+eigenen, schärferen Limits versehen werden – z. B. `AuthController.login: 15/60s`.
+
+Alle Responses enthalten `RateLimit-*`- und `X-RateLimit-*`-Header mit dem aktuellen
+Zählerstand.
+
+> **Hinweis:** Die aktuelle Implementierung nutzt einen In-Memory-Store. Für verteilte
+> Deployments (mehrere Server-Instanzen) sollte ein gemeinsamer Store wie **Redis**
+> verwendet werden.
+
+Eine ausführliche Erklärung – inklusive Begriffserklärungen, Konfigurationsbeispiele und
+häufige Fragen – findest du in [RATE_LIMITING.md](RATE_LIMITING.md).
 
 ## 💻 Entwicklung
 
