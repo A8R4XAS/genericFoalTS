@@ -32,10 +32,14 @@ describe('RateLimit hook', () => {
     const hookFn = getHookFunction(
       RateLimit('auth', {
         auth: { points: 2, duration: 60 },
+        endpoints: {
+          'AuthController.login': { points: 2, duration: 60 },
+          'TestAuthController.login': { points: 2, duration: 60 },
+        },
       })
     );
 
-    const { ctx, headers } = createContext('AuthController', 'login', '10.0.0.1');
+    const { ctx, headers } = createContext('TestAuthController', 'login', '10.0.0.1');
     const response = await hookFn(ctx, new ServiceManager());
 
     strictEqual(response, undefined);
@@ -49,12 +53,16 @@ describe('RateLimit hook', () => {
     const hookFn = getHookFunction(
       RateLimit('auth', {
         auth: { points: 2, duration: 60 },
+        endpoints: {
+          'AuthController.login': { points: 2, duration: 60 },
+          'TestAuthController.login': { points: 2, duration: 60 },
+        },
       })
     );
 
-    const first = createContext('AuthController', 'login', '10.0.0.2').ctx;
-    const second = createContext('AuthController', 'login', '10.0.0.2').ctx;
-    const third = createContext('AuthController', 'login', '10.0.0.2').ctx;
+    const first = createContext('TestAuthController', 'login', '10.0.0.2').ctx;
+    const second = createContext('TestAuthController', 'login', '10.0.0.2').ctx;
+    const third = createContext('TestAuthController', 'login', '10.0.0.2').ctx;
 
     await hookFn(first, new ServiceManager());
     await hookFn(second, new ServiceManager());

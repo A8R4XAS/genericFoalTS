@@ -31,15 +31,13 @@
       "duration": 60
     },
     "endpoints": {
-      "AuthController": {
-        "login": {
-          "points": 15,
-          "duration": 60
-        },
-        "register": {
-          "points": 25,
-          "duration": 60
-        }
+      "AuthController.login": {
+        "points": 15,
+        "duration": 60
+      },
+      "AuthController.register": {
+        "points": 25,
+        "duration": 60
       }
     }
   },

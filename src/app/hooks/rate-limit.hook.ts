@@ -91,6 +91,11 @@ function getLimiter(points: number, duration: number): RateLimiterMemory {
   return created;
 }
 
+function isRateLimiterResult(error: unknown): error is RateLimiterRes {
+  if (typeof error !== 'object' || error === null) return false;
+  return 'msBeforeNext' in error || 'remainingPoints' in error;
+}
+
 export function RateLimit(
   profile: RateLimitProfile = 'default',
   options?: RateLimitOptions
@@ -122,7 +127,10 @@ export function RateLimit(
       }
       return;
     } catch (error) {
-      const rateLimitResult = error as RateLimiterRes;
+      if (!isRateLimiterResult(error)) {
+        throw error;
+      }
+      const rateLimitResult = error;
       const msBeforeNext = rateLimitResult.msBeforeNext || duration * 1000;
       const remainingPoints = rateLimitResult.remainingPoints ?? 0;
 
