@@ -73,14 +73,14 @@ function setRateLimitHeaders(
   msBeforeNext: number
 ) {
   const resetInSeconds = Math.max(1, Math.ceil(msBeforeNext / 1000));
-  const resetAtUnix = Math.ceil((Date.now() + msBeforeNext) / 1000);
+  const resetTimestamp = Math.ceil((Date.now() + msBeforeNext) / 1000);
 
   target.setHeader('RateLimit-Limit', `${points}`);
   target.setHeader('RateLimit-Remaining', `${Math.max(0, remainingPoints)}`);
   target.setHeader('RateLimit-Reset', `${resetInSeconds}`);
   target.setHeader('X-RateLimit-Limit', `${points}`);
   target.setHeader('X-RateLimit-Remaining', `${Math.max(0, remainingPoints)}`);
-  target.setHeader('X-RateLimit-Reset', `${resetAtUnix}`);
+  target.setHeader('X-RateLimit-Reset', `${resetTimestamp}`);
 }
 
 function getLimiter(points: number, duration: number): RateLimiterMemory {
@@ -95,7 +95,7 @@ function getLimiter(points: number, duration: number): RateLimiterMemory {
 
 function isRateLimiterResult(error: unknown): error is RateLimiterRes {
   if (typeof error !== 'object' || error === null) return false;
-  return 'msBeforeNext' in error || 'remainingPoints' in error;
+  return 'msBeforeNext' in error && 'remainingPoints' in error;
 }
 
 export function RateLimit(
