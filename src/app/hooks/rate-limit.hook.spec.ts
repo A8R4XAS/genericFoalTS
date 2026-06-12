@@ -104,8 +104,8 @@ describe('RateLimit hook', () => {
     const first = createContext('ApiController', 'profile', '10.0.0.9').ctx;
     const second = createContext('ApiController', 'profile', '10.0.0.10').ctx;
 
-    first.user = { id: 123 } as any;
-    second.user = { id: 123 } as any;
+    first.user = { id: 123 } as { id: number };
+    second.user = { id: 123 } as { id: number };
 
     await hookFn(first, new ServiceManager());
     const response = await hookFn(second, new ServiceManager());

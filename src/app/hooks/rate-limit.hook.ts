@@ -98,7 +98,7 @@ function isRateLimiterResult(error: unknown): error is RateLimiterRes {
 }
 
 function resolveMsBeforeNext(msBeforeNext: number | undefined, duration: number): number {
-  return msBeforeNext || duration * 1000;
+  return msBeforeNext ?? duration * 1000;
 }
 
 export function RateLimit(
@@ -111,8 +111,8 @@ export function RateLimit(
     const endpointOverride = config.endpoints[endpointKey];
     const base = config[profile];
 
-    const points = positiveInt(endpointOverride?.points ?? base.points, base.points);
-    const duration = positiveInt(endpointOverride?.duration ?? base.duration, base.duration);
+    const points = positiveInt(endpointOverride?.points ?? base.points, 1);
+    const duration = positiveInt(endpointOverride?.duration ?? base.duration, 1);
 
     const limiter = getLimiter(points, duration);
     const identifier = `${endpointKey}:${getClientIdentifier(ctx)}`;
