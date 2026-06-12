@@ -23,6 +23,7 @@ import {
 } from '../../validators';
 import { validateBody } from '../../utils';
 import { EmailService, PasswordHashingService } from '../services';
+import { RateLimit } from '../hooks';
 
 /** Verification token TTL in hours (default: 24) */
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
@@ -30,6 +31,7 @@ const VERIFICATION_TOKEN_TTL_HOURS = 24;
 /** Password reset token TTL in hours (default: 1) */
 const RESET_PASSWORD_TOKEN_TTL_HOURS = 1;
 
+@RateLimit('auth')
 export class AuthController {
   @dependency
   passwordHashingService: PasswordHashingService;
