@@ -485,7 +485,7 @@
           .split('/')
           .map(segment => {
             if (/^[0-9a-f]{32,}$/i.test(segment)) return '[REDACTED]';
-            if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(segment)) return '[REDACTED]';
+            if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(segment)) return '[REDACTED]';
             return segment;
           })
           .join('/');
