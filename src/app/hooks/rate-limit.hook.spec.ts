@@ -93,4 +93,23 @@ describe('RateLimit hook', () => {
     ok(isHttpResponseTooManyRequests(response), 'Expected endpoint override limit to be enforced');
     strictEqual(response.getHeader('X-RateLimit-Limit'), '1');
   });
+
+  it('should use authenticated user id for rate-limit key when available.', async () => {
+    const hookFn = getHookFunction(
+      RateLimit('default', {
+        default: { points: 1, duration: 60 },
+      })
+    );
+
+    const first = createContext('ApiController', 'profile', '10.0.0.9').ctx;
+    const second = createContext('ApiController', 'profile', '10.0.0.10').ctx;
+
+    first.user = { id: 123 } as any;
+    second.user = { id: 123 } as any;
+
+    await hookFn(first, new ServiceManager());
+    const response = await hookFn(second, new ServiceManager());
+
+    ok(isHttpResponseTooManyRequests(response), 'Expected user-based limit to be enforced');
+  });
 });
