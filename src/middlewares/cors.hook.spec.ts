@@ -197,6 +197,20 @@ describe('Cors hook', () => {
       strictEqual(response.getHeader('Access-Control-Allow-Origin'), '*');
     });
 
+    it('should reflect the request Origin (not *) and set Vary: Origin when wildcard is configured but credentials are enabled.', () => {
+      mockConfig({ 'cors.allowedOrigins': '*', 'cors.allowCredentials': true });
+
+      const hookFn = getHookFunction(Cors());
+      const ctx = makeContext({ method: 'GET' }, 'http://any-origin.com');
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: any) => void;
+
+      const response = new HttpResponseOK();
+      postHook(response);
+
+      strictEqual(response.getHeader('Access-Control-Allow-Origin'), 'http://any-origin.com');
+      strictEqual(response.getHeader('Vary'), 'Origin');
+    });
+
     it('should not set Access-Control-Allow-Origin for a disallowed origin.', () => {
       mockConfig({ 'cors.allowedOrigins': 'https://example.com' });
 

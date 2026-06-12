@@ -75,12 +75,23 @@ export function Cors(): HookDecorator {
       if (allowedOrigins.includes('*') && !allowCredentials) {
         // Wildcard is only valid when credentials are disabled.
         allowOriginValue = '*';
-      } else if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      } else if (
+        requestOrigin &&
+        (allowedOrigins.includes(requestOrigin) || allowedOrigins.includes('*'))
+      ) {
         // Echo back the specific origin so the browser accepts the response.
+        // When allowedOrigins is '*' but credentials are required, the wildcard
+        // cannot be used (browsers reject it), so we reflect the request Origin.
         allowOriginValue = requestOrigin;
         // When reflecting a specific origin the response must vary on `Origin`
         // so intermediate caches do not serve it to requests from other origins.
-        response.setHeader('Vary', 'Origin');
+        // Append rather than overwrite so existing Vary values are preserved,
+        // and avoid adding a duplicate if 'Origin' is already listed.
+        const existingVary = response.getHeader('Vary');
+        const varyTokens = existingVary ? existingVary.split(',').map(v => v.trim()) : [];
+        if (!varyTokens.includes('Origin')) {
+          response.setHeader('Vary', existingVary ? `${existingVary}, Origin` : 'Origin');
+        }
       }
 
       if (!allowOriginValue) {
