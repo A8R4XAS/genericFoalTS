@@ -123,6 +123,9 @@ Rate Limiting ist über `config/default.json` konfigurierbar:
 Bei Überschreitung wird `429 Too Many Requests` zurückgegeben. Zusätzlich werden
 `RateLimit-*` und `X-RateLimit-*` Header in Responses gesetzt.
 
+Hinweis: Die aktuelle Implementierung nutzt einen In-Memory-Store. Für verteilte
+Deployments (mehrere Instanzen) sollte ein gemeinsamer Store wie Redis genutzt werden.
+
 ## 💻 Entwicklung
 
 ### Development-Server starten

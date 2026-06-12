@@ -52,12 +52,14 @@ function getRateLimitConfig(options?: RateLimitOptions): ResolvedRateLimitConfig
 function getClientIdentifier(ctx: Context): string {
   const request = ctx.request as Context['request'] & {
     socket?: { remoteAddress?: string };
-    headers?: Record<string, unknown>;
   };
-  const forwardedFor = request.headers?.['x-forwarded-for'];
-  const firstForwardedIp =
-    typeof forwardedFor === 'string' ? forwardedFor.split(',')[0].trim() : undefined;
-  return request.ip || firstForwardedIp || request.socket?.remoteAddress || 'anonymous';
+  const user = ctx.user as { id?: number | string } | null;
+
+  if (user?.id !== undefined && user?.id !== null) {
+    return `user:${user.id}`;
+  }
+
+  return request.ip || request.socket?.remoteAddress || 'anonymous';
 }
 
 function getEndpointKey(ctx: Context): string {
