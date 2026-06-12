@@ -16,12 +16,19 @@ import {
  *
  * Configuration keys (all under the `cors` namespace):
  *  - `cors.allowedOrigins`   – Comma-separated list of allowed origins.
- *                              Use `*` to allow any origin (only when credentials are disabled).
- *                              Defaults to the value of `app.frontendBaseUrl` or `http://localhost:3000`.
+ *                              **Fallback chain** (first match wins):
+ *                              1. `CORS_ALLOWED_ORIGINS` env var (via `cors.allowedOrigins` config key)
+ *                              2. `app.frontendBaseUrl` config value (`APP_FRONTEND_BASE_URL` env var)
+ *                              3. Hardcoded development default `http://localhost:3000`
+ *                              Use `*` only when `cors.allowCredentials` is `false`.
+ *                              **Warning**: a wildcard origin (`*`) allows _any_ website to call this
+ *                              API. In production, always list explicit origins instead of using `*`.
  *  - `cors.allowedMethods`   – Comma-separated HTTP methods (default: GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS).
  *  - `cors.allowedHeaders`   – Comma-separated request headers (default: Content-Type,Authorization).
  *  - `cors.exposeHeaders`    – Comma-separated response headers exposed to the browser (default: none).
  *  - `cors.allowCredentials` – Send `Access-Control-Allow-Credentials: true` (default: true).
+ *                              Note: credentials cannot be combined with a wildcard origin; the hook
+ *                              ignores `*` and falls back to the reflected `Origin` header automatically.
  *  - `cors.maxAge`           – Pre-flight cache duration in seconds (default: 86400).
  *  - `cors.enabled`          – Set to `false` to disable CORS entirely (default: true).
  */
