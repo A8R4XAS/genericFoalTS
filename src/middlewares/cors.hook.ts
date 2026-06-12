@@ -62,8 +62,10 @@ export function Cors(): HookDecorator {
 
     const req = ctx.request as Record<string, unknown>;
     const method = (req['method'] as string | undefined) ?? '';
-    const getHeader = req['get'] as ((h: string) => string | undefined) | undefined;
-    const requestOrigin = getHeader?.('Origin');
+    const requestOrigin =
+      typeof req['get'] === 'function'
+        ? (req as { get(h: string): string | undefined }).get('Origin')
+        : undefined;
 
     /**
      * Determines the `Access-Control-Allow-Origin` value for the given request
@@ -88,8 +90,10 @@ export function Cors(): HookDecorator {
         // Append rather than overwrite so existing Vary values are preserved,
         // and avoid adding a duplicate if 'Origin' is already listed.
         const existingVary = response.getHeader('Vary');
-        const varyTokens = existingVary ? existingVary.split(',').map(v => v.trim()) : [];
-        if (!varyTokens.includes('Origin')) {
+        const varyTokens = existingVary
+          ? existingVary.split(',').map(v => v.trim().toLowerCase())
+          : [];
+        if (!varyTokens.includes('origin')) {
           response.setHeader('Vary', existingVary ? `${existingVary}, Origin` : 'Origin');
         }
       }
@@ -113,9 +117,11 @@ export function Cors(): HookDecorator {
     if (method === 'OPTIONS') {
       const preflightResponse = new HttpResponseNoContent();
       writeCorsHeaders(preflightResponse);
-      preflightResponse.setHeader('Access-Control-Allow-Methods', allowedMethods);
-      preflightResponse.setHeader('Access-Control-Allow-Headers', allowedHeaders);
-      preflightResponse.setHeader('Access-Control-Max-Age', String(maxAge));
+      if (preflightResponse.getHeader('Access-Control-Allow-Origin')) {
+        preflightResponse.setHeader('Access-Control-Allow-Methods', allowedMethods);
+        preflightResponse.setHeader('Access-Control-Allow-Headers', allowedHeaders);
+        preflightResponse.setHeader('Access-Control-Max-Age', String(maxAge));
+      }
       return preflightResponse;
     }
 

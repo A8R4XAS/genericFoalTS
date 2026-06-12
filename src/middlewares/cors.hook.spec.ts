@@ -141,6 +141,18 @@ describe('Cors hook', () => {
         !response.getHeader('Access-Control-Allow-Origin'),
         'Should not set Allow-Origin for disallowed origin'
       );
+      ok(
+        !response.getHeader('Access-Control-Allow-Methods'),
+        'Should not set Allow-Methods for disallowed origin'
+      );
+      ok(
+        !response.getHeader('Access-Control-Allow-Headers'),
+        'Should not set Allow-Headers for disallowed origin'
+      );
+      ok(
+        !response.getHeader('Access-Control-Max-Age'),
+        'Should not set Max-Age for disallowed origin'
+      );
     });
   });
 
@@ -182,6 +194,34 @@ describe('Cors hook', () => {
       postHook(response);
 
       strictEqual(response.getHeader('Vary'), 'Origin');
+    });
+
+    it('should preserve existing Vary values when appending Origin.', () => {
+      mockConfig({ 'cors.allowedOrigins': 'http://localhost:3000', 'cors.allowCredentials': true });
+
+      const hookFn = getHookFunction(Cors());
+      const ctx = makeContext({ method: 'GET' }, 'http://localhost:3000');
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: any) => void;
+
+      const response = new HttpResponseOK();
+      response.setHeader('Vary', 'Accept-Encoding');
+      postHook(response);
+
+      strictEqual(response.getHeader('Vary'), 'Accept-Encoding, Origin');
+    });
+
+    it('should not add a duplicate Origin token to Vary regardless of casing.', () => {
+      mockConfig({ 'cors.allowedOrigins': 'http://localhost:3000', 'cors.allowCredentials': true });
+
+      const hookFn = getHookFunction(Cors());
+      const ctx = makeContext({ method: 'GET' }, 'http://localhost:3000');
+      const postHook = hookFn(ctx, new ServiceManager()) as (r: any) => void;
+
+      const response = new HttpResponseOK();
+      response.setHeader('Vary', 'origin');
+      postHook(response);
+
+      strictEqual(response.getHeader('Vary'), 'origin');
     });
 
     it('should set Access-Control-Allow-Origin to * when wildcard is configured and credentials disabled.', () => {
