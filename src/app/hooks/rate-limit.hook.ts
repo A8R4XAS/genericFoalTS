@@ -29,7 +29,14 @@
  * See RATE_LIMITING.md for configuration examples and a beginner-friendly walkthrough.
  */
 
-import { Config, Context, Hook, HookDecorator, HttpResponseTooManyRequests } from '@foal/core';
+import {
+  Config,
+  Context,
+  Hook,
+  HookDecorator,
+  HttpResponse,
+  HttpResponseTooManyRequests,
+} from '@foal/core';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
 // A profile selects the base limits to use. 'auth' uses stricter defaults than 'default'
@@ -65,8 +72,11 @@ const limiterCache = new Map<string, RateLimiterMemory>();
 
 // Guard against invalid config values: ensures that points and duration are always positive
 // integers. Falls back to a safe default if the value is 0, negative, or non-numeric.
+// Math.floor is applied before the positivity check so that fractional values in (0, 1)
+// (e.g. 0.5) floor to 0 and correctly trigger the fallback rather than producing 0.
 function positiveInt(value: number, fallback: number): number {
-  return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+  const floored = Math.floor(value);
+  return Number.isFinite(value) && floored > 0 ? floored : fallback;
 }
 
 /**
@@ -223,8 +233,8 @@ export function RateLimit(
     const endpointOverride = config.endpoints[endpointKey];
     const base = config[profile];
 
-    const points = positiveInt(endpointOverride?.points ?? base.points, 1);
-    const duration = positiveInt(endpointOverride?.duration ?? base.duration, 1);
+    const points = positiveInt(endpointOverride?.points ?? base.points, base.points);
+    const duration = positiveInt(endpointOverride?.duration ?? base.duration, base.duration);
 
     // The limiter key combines the endpoint and the caller identity so that each
     // client gets their own independent counter per endpoint.
@@ -236,19 +246,15 @@ export function RateLimit(
       // It resolves with the updated counter if points remain, or throws a RateLimiterRes
       // if the caller has exhausted their allowance.
       const result = await limiter.consume(identifier, 1);
-      const response = (
-        ctx.request as { res?: { setHeader(name: string, value: string): unknown } }
-      ).res;
-      if (response?.setHeader) {
-        setRateLimitHeaders(
-          response,
-          points,
-          result.remainingPoints,
-          resolveMsBeforeNext(result.msBeforeNext, duration)
-        );
-      }
-      // Returning undefined lets FoalTS continue to the actual controller method.
-      return;
+      const remainingPoints = result.remainingPoints;
+      const msBeforeNext = resolveMsBeforeNext(result.msBeforeNext, duration);
+
+      // Return a post-hook so rate-limit headers are set on the FoalTS HttpResponse
+      // (platform-agnostic) rather than directly on the underlying Express response object.
+      // This matches the pattern used by RequestLogger and other hooks in this codebase.
+      return (response: HttpResponse) => {
+        setRateLimitHeaders(response, points, remainingPoints, msBeforeNext);
+      };
     } catch (error) {
       // Re-throw anything that is not a rate-limiter exhaustion result (e.g. a real bug).
       if (!isRateLimiterResult(error)) {

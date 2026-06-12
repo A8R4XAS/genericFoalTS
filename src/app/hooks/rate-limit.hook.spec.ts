@@ -2,6 +2,8 @@ import { strictEqual, ok } from 'assert';
 import {
   Context,
   getHookFunction,
+  HttpResponse,
+  HttpResponseOK,
   isHttpResponseTooManyRequests,
   ServiceManager,
 } from '@foal/core';
@@ -9,22 +11,9 @@ import {
 import { RateLimit } from './rate-limit.hook';
 
 function createContext(controllerName: string, controllerMethodName: string, ip = '127.0.0.1') {
-  const headers: Record<string, string> = {};
-  const ctx = new Context(
-    {
-      ip,
-      headers: {},
-      res: {
-        setHeader(name: string, value: string) {
-          headers[name] = value;
-        },
-      },
-    },
-    controllerName,
-    controllerMethodName
-  );
+  const ctx = new Context({ ip, headers: {} }, controllerName, controllerMethodName);
 
-  return { ctx, headers };
+  return { ctx };
 }
 
 describe('RateLimit hook', () => {
@@ -39,14 +28,19 @@ describe('RateLimit hook', () => {
       })
     );
 
-    const { ctx, headers } = createContext('TestAuthController', 'login', '10.0.0.1');
-    const response = await hookFn(ctx, new ServiceManager());
+    const { ctx } = createContext('TestAuthController', 'login', '10.0.0.1');
+    const postHook = await hookFn(ctx, new ServiceManager());
 
-    strictEqual(response, undefined);
-    strictEqual(headers['X-RateLimit-Limit'], '2');
-    strictEqual(headers['RateLimit-Limit'], '2');
-    strictEqual(headers['X-RateLimit-Remaining'], '1');
-    ok(Number(headers['RateLimit-Reset']) >= 1);
+    // The hook returns a post-hook function to set headers on the FoalTS HttpResponse.
+    ok(typeof postHook === 'function', 'Expected a post-hook function');
+
+    const httpResponse = new HttpResponseOK();
+    (postHook as (r: HttpResponse) => void)(httpResponse);
+
+    strictEqual(httpResponse.getHeader('X-RateLimit-Limit'), '2');
+    strictEqual(httpResponse.getHeader('RateLimit-Limit'), '2');
+    strictEqual(httpResponse.getHeader('X-RateLimit-Remaining'), '1');
+    ok(Number(httpResponse.getHeader('RateLimit-Reset')) >= 1);
   });
 
   it('should return 429 when the configured limit is exceeded.', async () => {
