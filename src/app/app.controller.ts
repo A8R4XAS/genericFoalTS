@@ -1,12 +1,16 @@
 import { controller, Get, HttpResponseNotFound, IAppController } from '@foal/core';
 
-import { ApiController, AuthController } from './controllers';
+import { ApiController, AuthController, HealthController } from './controllers';
 import { Cors, RequestLogger } from '../middlewares';
 
 @Cors()
 @RequestLogger()
 export class AppController implements IAppController {
-  subControllers = [controller('/api', ApiController), controller('/api/auth', AuthController)];
+  subControllers = [
+    controller('/api', ApiController),
+    controller('/api/auth', AuthController),
+    controller('/health', HealthController),
+  ];
 
   /**
    * Block the dev-only test harness in production.
