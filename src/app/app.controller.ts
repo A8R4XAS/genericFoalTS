@@ -1,8 +1,9 @@
 import { controller, Get, HttpResponseNotFound, IAppController } from '@foal/core';
 
 import { ApiController, AuthController } from './controllers';
-import { RequestLogger } from '../middlewares';
+import { Cors, RequestLogger } from '../middlewares';
 
+@Cors()
 @RequestLogger()
 export class AppController implements IAppController {
   subControllers = [controller('/api', ApiController), controller('/api/auth', AuthController)];
