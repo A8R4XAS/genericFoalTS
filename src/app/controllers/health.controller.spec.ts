@@ -41,7 +41,7 @@ describe('HealthController', () => {
     originalDataSource = db.dataSource;
   });
 
-  after(() => {
+  afterEach(() => {
     db.dataSource = originalDataSource;
   });
 
@@ -117,7 +117,7 @@ describe('HealthController', () => {
       ok(isHttpResponseServiceUnavailable(response));
       strictEqual(response.body.status, 'error');
       strictEqual(response.body.ready, false);
-      strictEqual(response.body.reason, 'connection refused');
+      strictEqual(response.body.reason, 'Database query failed');
     });
   });
 
@@ -152,7 +152,7 @@ describe('HealthController', () => {
 
       ok(isHttpResponseServiceUnavailable(response));
       strictEqual(response.body.db, 'disconnected');
-      strictEqual(response.body.reason, 'ECONNREFUSED');
+      strictEqual(response.body.reason, 'Database query failed');
     });
   });
 });

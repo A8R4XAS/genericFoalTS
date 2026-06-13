@@ -75,8 +75,7 @@ export class HealthController {
       await dataSource.query('SELECT 1');
       return { ok: true };
     } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      return { ok: false, reason };
+      return { ok: false, reason: 'Database query failed' };
     }
   }
 }

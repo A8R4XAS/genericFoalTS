@@ -44,7 +44,8 @@
   "logger": {
     "requestLogger": {
       "enabled": true,
-      "format": "json"
+      "format": "json",
+      "skipPaths": ["/health", "/health/live", "/health/ready", "/health/db"]
     }
   },
   "cors": {
