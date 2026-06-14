@@ -1,8 +1,16 @@
-import { controller, Get, HttpResponseNotFound, IAppController } from '@foal/core';
+import {
+  controller,
+  Get,
+  HttpResponseNoContent,
+  HttpResponseNotFound,
+  IAppController,
+  Post,
+} from '@foal/core';
 
 import { ApiController, AuthController, HealthController } from './controllers';
-import { Cors, RequestLogger } from '../middlewares';
+import { Cors, RequestLogger, SecurityHeaders } from '../middlewares';
 
+@SecurityHeaders()
 @Cors()
 @RequestLogger()
 export class AppController implements IAppController {
@@ -22,5 +30,15 @@ export class AppController implements IAppController {
     if (process.env.NODE_ENV === 'production') {
       return new HttpResponseNotFound();
     }
+  }
+
+  /**
+   * Browser can send CSP violation reports to this endpoint.
+   * We return 204 intentionally: reporting clients only need an ACK.
+   * Actual logging is done inside the SecurityHeaders/Helmet hook.
+   */
+  @Post('/csp-violation-report')
+  receiveCspViolationReport(): HttpResponseNoContent {
+    return new HttpResponseNoContent();
   }
 }

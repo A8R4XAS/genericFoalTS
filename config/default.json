@@ -54,5 +54,15 @@
     "allowedHeaders": "Content-Type,Authorization",
     "allowCredentials": true,
     "maxAge": 86400
+  },
+  "security": {
+    "helmet": {
+      "enabled": true,
+      "enforceHttpsInProduction": true,
+      "referrerPolicy": "no-referrer",
+      "csp": {
+        "reportUri": "/csp-violation-report"
+      }
+    }
   }
 }
