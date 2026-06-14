@@ -9,8 +9,28 @@ import {
   Logger,
   ServiceManager,
 } from '@foal/core';
+import helmet from 'helmet';
 
-const helmet = require('helmet') as typeof import('helmet').default;
+type ReferrerPolicyValue =
+  | 'no-referrer'
+  | 'no-referrer-when-downgrade'
+  | 'same-origin'
+  | 'origin'
+  | 'strict-origin'
+  | 'origin-when-cross-origin'
+  | 'strict-origin-when-cross-origin'
+  | 'unsafe-url'
+  | '';
+
+type RequestLike = {
+  method?: string;
+  url?: string;
+  originalUrl?: string;
+  secure?: boolean;
+  body?: unknown;
+  headers?: Record<string, unknown>;
+  get?: (headerName: string) => string | undefined;
+};
 
 /**
  * SecurityHeaders middleware based on Helmet.js.
@@ -22,7 +42,7 @@ const helmet = require('helmet') as typeof import('helmet').default;
  */
 export function SecurityHeaders(): HookDecorator {
   return Hook((ctx: Context, services: ServiceManager) => {
-    const req = ctx.request as Record<string, unknown>;
+    const req = ctx.request as RequestLike;
     const logger = services.get(Logger);
 
     const enabled = Config.get('security.helmet.enabled', 'boolean', true);
@@ -45,19 +65,19 @@ export function SecurityHeaders(): HookDecorator {
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction && enforceHttpsInProduction && !isHttpsRequest(req)) {
       const host = getRequestHeader(req, 'host');
-      const url = typeof req['originalUrl'] === 'string' ? req['originalUrl'] : req['url'];
+      const url = typeof req.originalUrl === 'string' ? req.originalUrl : req.url;
       if (host && typeof url === 'string') {
         return new HttpResponseMovedPermanently(`https://${host}${url}`);
       }
     }
 
-    if (isCspReportRequest(req, cspReportUri)) {
-      logger.warn(`CSP violation report: ${JSON.stringify(req['body'] ?? null)}`);
-    }
-
-    const cspSelf = '\u0027self\u0027';
-    const cspNone = '\u0027none\u0027';
-    const cspUnsafeInline = '\u0027unsafe-inline\u0027';
+    // eslint-disable-next-line @typescript-eslint/quotes
+    const cspSelf = "'self'";
+    // eslint-disable-next-line @typescript-eslint/quotes
+    const cspNone = "'none'";
+    // In Helmet CSP config, [] enables valueless directives like upgrade-insecure-requests.
+    // We only enable it in production to avoid forcing HTTPS upgrades in local dev.
+    const cspUpgradeInsecureRequests = isProduction ? [] : null;
 
     const helmetMiddleware = helmet({
       contentSecurityPolicy: {
@@ -67,10 +87,10 @@ export function SecurityHeaders(): HookDecorator {
           baseUri: [cspSelf],
           frameAncestors: [cspNone],
           objectSrc: [cspNone],
-          scriptSrc: [cspSelf, cspUnsafeInline],
-          styleSrc: [cspSelf, cspUnsafeInline],
+          scriptSrc: [cspSelf],
+          styleSrc: [cspSelf],
           imgSrc: [cspSelf, 'data:'],
-          upgradeInsecureRequests: null,
+          upgradeInsecureRequests: cspUpgradeInsecureRequests,
           reportUri: [cspReportUri],
         },
       },
@@ -78,7 +98,7 @@ export function SecurityHeaders(): HookDecorator {
       noSniff: true,
       referrerPolicy: {
         // Stored in config so we can tighten/relax policy without touching code.
-        policy: referrerPolicy as any,
+        policy: referrerPolicy as ReferrerPolicyValue,
       },
     });
 
@@ -106,31 +126,32 @@ export function SecurityHeaders(): HookDecorator {
 
       if (middlewareError) {
         logger.error(`Helmet middleware failed: ${String(middlewareError)}`);
+        applyFallbackSecurityHeaders(response, cspReportUri, referrerPolicy);
         return;
       }
 
       for (const [name, value] of capturedHeaders.entries()) {
-        response.setHeader(name, value as any);
+        response.setHeader(name, normalizeHeaderValue(value));
       }
     };
   });
 }
 
-function getRequestHeader(req: Record<string, unknown>, headerName: string): string | undefined {
-  if (typeof req['get'] === 'function') {
-    return (req as any).get(headerName) as string | undefined;
+function getRequestHeader(req: RequestLike, headerName: string): string | undefined {
+  if (typeof req.get === 'function') {
+    return req.get(headerName);
   }
-  const headers = req['headers'];
+  const headers = req.headers;
   if (headers && typeof headers === 'object') {
-    const raw = (headers as Record<string, unknown>)[headerName.toLowerCase()];
-    if (Array.isArray(raw)) return raw[0] as string | undefined;
+    const raw = headers[headerName.toLowerCase()];
+    if (Array.isArray(raw)) return typeof raw[0] === 'string' ? raw[0] : undefined;
     if (typeof raw === 'string') return raw;
   }
   return undefined;
 }
 
-function isHttpsRequest(req: Record<string, unknown>): boolean {
-  if (req['secure'] === true) {
+function isHttpsRequest(req: RequestLike): boolean {
+  if (req.secure === true) {
     return true;
   }
 
@@ -142,16 +163,23 @@ function isHttpsRequest(req: Record<string, unknown>): boolean {
   return false;
 }
 
-function isCspReportRequest(req: Record<string, unknown>, cspReportUri: string): boolean {
-  const method = typeof req['method'] === 'string' ? req['method'].toUpperCase() : '';
-  if (method !== 'POST') return false;
+function normalizeHeaderValue(value: number | string | string[]): string {
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  return String(value);
+}
 
-  const rawUrl =
-    typeof req['originalUrl'] === 'string'
-      ? req['originalUrl']
-      : typeof req['url'] === 'string'
-        ? req['url']
-        : '';
-  const requestPath = rawUrl.split('?')[0];
-  return requestPath === cspReportUri;
+function applyFallbackSecurityHeaders(
+  response: HttpResponse,
+  cspReportUri: string,
+  referrerPolicy: string
+): void {
+  response.setHeader('X-Frame-Options', 'DENY');
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Referrer-Policy', referrerPolicy);
+  response.setHeader(
+    'Content-Security-Policy',
+    `default-src 'self'; frame-ancestors 'none'; object-src 'none'; report-uri ${cspReportUri}`
+  );
 }

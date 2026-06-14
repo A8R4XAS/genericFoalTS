@@ -35,7 +35,6 @@ function makeContext(overrides: Record<string, unknown> = {}): Context {
 describe('SecurityHeaders hook', () => {
   let originalGet: typeof Config.get;
   let originalNodeEnv: string | undefined;
-  let warnOutput: string[];
 
   function mockConfig(overrides: Record<string, unknown>): void {
     Config.get = (key: string, type?: any, defaultValue?: any) => {
@@ -47,11 +46,10 @@ describe('SecurityHeaders hook', () => {
 
   function makeServices(): ServiceManager {
     const services = new ServiceManager();
-    warnOutput = [];
     services.set(Logger, {
       info: (_msg: string) => {},
       debug: (_msg: string) => {},
-      warn: (msg: string) => warnOutput.push(msg),
+      warn: (_msg: string) => {},
       error: (_msg: string) => {},
       log: (_msg: string) => {},
     } as any);
@@ -122,23 +120,5 @@ describe('SecurityHeaders hook', () => {
     );
 
     strictEqual(typeof result, 'function');
-  });
-
-  it('should log CSP violation report payloads.', () => {
-    mockConfig({ 'security.helmet.csp.reportUri': '/csp-violation-report' });
-
-    const hookFn = getHookFunction(SecurityHeaders());
-    void hookFn(
-      makeContext({
-        method: 'POST',
-        url: '/csp-violation-report',
-        originalUrl: '/csp-violation-report',
-        body: { 'csp-report': { blockedUri: 'https://evil.example/script.js' } },
-      }),
-      makeServices()
-    );
-
-    strictEqual(warnOutput.length, 1);
-    ok(warnOutput[0].includes('CSP violation report'));
   });
 });

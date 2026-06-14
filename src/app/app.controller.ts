@@ -1,4 +1,5 @@
 import {
+  Context,
   controller,
   Get,
   HttpResponseNoContent,
@@ -35,10 +36,34 @@ export class AppController implements IAppController {
   /**
    * Browser can send CSP violation reports to this endpoint.
    * We return 204 intentionally: reporting clients only need an ACK.
-   * Actual logging is done inside the SecurityHeaders/Helmet hook.
+   * We log a sanitized subset of the report fields for diagnostics.
    */
   @Post('/csp-violation-report')
-  receiveCspViolationReport(): HttpResponseNoContent {
+  receiveCspViolationReport(ctx: Context): HttpResponseNoContent {
+    console.warn(`CSP violation report: ${serializeCspReportForLog((ctx.request as any).body)}`);
     return new HttpResponseNoContent();
   }
+}
+
+function serializeCspReportForLog(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') {
+    return '{}';
+  }
+
+  const reportEnvelope = payload as Record<string, unknown>;
+  const report =
+    typeof reportEnvelope['csp-report'] === 'object' && reportEnvelope['csp-report'] !== null
+      ? (reportEnvelope['csp-report'] as Record<string, unknown>)
+      : reportEnvelope;
+
+  // These hyphenated keys are defined by the CSP report specification.
+  const safeReport: Record<string, string> = {};
+  for (const key of ['blocked-uri', 'violated-directive', 'effective-directive', 'document-uri']) {
+    const value = report[key];
+    if (typeof value === 'string') {
+      safeReport[key] = value.slice(0, 300);
+    }
+  }
+
+  return JSON.stringify(safeReport);
 }
