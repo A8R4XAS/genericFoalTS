@@ -9,7 +9,7 @@ import {
   Logger,
   ServiceManager,
 } from '@foal/core';
-import helmet from 'helmet';
+import * as helmet from 'helmet';
 
 type ReferrerPolicyValue =
   | 'no-referrer'
@@ -64,10 +64,12 @@ export function SecurityHeaders(): HookDecorator {
 
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction && enforceHttpsInProduction && !isHttpsRequest(req)) {
-      const host = getRequestHeader(req, 'host');
       const url = typeof req.originalUrl === 'string' ? req.originalUrl : req.url;
-      if (host && typeof url === 'string') {
-        return new HttpResponseMovedPermanently(`https://${host}${url}`);
+      if (typeof url === 'string') {
+        const trustedHost = getTrustedHost(req);
+        if (trustedHost) {
+          return new HttpResponseMovedPermanently(`https://${trustedHost}${url}`);
+        }
       }
     }
 
@@ -135,6 +137,27 @@ export function SecurityHeaders(): HookDecorator {
       }
     };
   });
+}
+
+function getTrustedHost(req: RequestLike): string | undefined {
+  // Prefer app.baseUrl as a trusted, server-configured source for the host.
+  const appBaseUrl = Config.get('app.baseUrl', 'string', '');
+  if (appBaseUrl) {
+    try {
+      return new URL(appBaseUrl).host;
+    } catch {
+      // fall through to request header if baseUrl is malformed
+    }
+  }
+
+  // Fall back to the request Host header, validated to prevent host-header injection.
+  // Allow only characters legal in a hostname/IP with optional port.
+  const host = getRequestHeader(req, 'host');
+  if (host && /^[a-zA-Z0-9\-.:[\]]+$/.test(host)) {
+    return host;
+  }
+
+  return undefined;
 }
 
 function getRequestHeader(req: RequestLike, headerName: string): string | undefined {

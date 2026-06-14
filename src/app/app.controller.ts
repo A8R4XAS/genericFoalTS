@@ -10,6 +10,7 @@ import {
 
 import { ApiController, AuthController, HealthController } from './controllers';
 import { Cors, RequestLogger, SecurityHeaders } from '../middlewares';
+import { RateLimit } from './hooks';
 
 @SecurityHeaders()
 @Cors()
@@ -38,6 +39,7 @@ export class AppController implements IAppController {
    * We return 204 intentionally: reporting clients only need an ACK.
    * We log a sanitized subset of the report fields for diagnostics.
    */
+  @RateLimit('default')
   @Post('/csp-violation-report')
   receiveCspViolationReport(ctx: Context): HttpResponseNoContent {
     console.warn(`CSP violation report: ${serializeCspReportForLog((ctx.request as any).body)}`);
