@@ -86,7 +86,9 @@ function sanitizeUrl(url: string): string {
  *
  * Enabling/disabling:
  *  - `logger.requestLogger.enabled` (default `true`) – set to `false` to disable this middleware
- *  - `logger.requestLogger.skipPaths` (default `[]`) – exact request paths to skip logging
+ *  - `logger.requestLogger.skipPaths` (default in this repo:
+ *    `["/health", "/health/live", "/health/ready", "/health/db"]`) – exact request paths to skip
+ *    logging
  *  - `settings.logger.logHttpRequests` (default `true`) – when `false`, logging is also suppressed
  *    (honoured so environments like e2e that disable FoalTS HTTP logging stay quiet)
  */

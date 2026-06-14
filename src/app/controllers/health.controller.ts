@@ -67,14 +67,14 @@ export class HealthController {
 
   // ─── private helpers ──────────────────────────────────────────────────────
 
-  private async checkDatabaseConnection(): Promise<{ ok: boolean; reason?: string }> {
+  private async checkDatabaseConnection(): Promise<{ ok: true } | { ok: false; reason: string }> {
     if (!dataSource.isInitialized) {
       return { ok: false, reason: 'DataSource not initialized' };
     }
     try {
       await dataSource.query('SELECT 1');
       return { ok: true };
-    } catch (err) {
+    } catch {
       return { ok: false, reason: 'Database query failed' };
     }
   }
