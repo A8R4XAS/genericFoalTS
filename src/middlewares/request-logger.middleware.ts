@@ -86,6 +86,9 @@ function sanitizeUrl(url: string): string {
  *
  * Enabling/disabling:
  *  - `logger.requestLogger.enabled` (default `true`) – set to `false` to disable this middleware
+ *  - `logger.requestLogger.skipPaths` (default in this repo:
+ *    `["/health", "/health/live", "/health/ready", "/health/db"]`) – exact request paths to skip
+ *    logging
  *  - `settings.logger.logHttpRequests` (default `true`) – when `false`, logging is also suppressed
  *    (honoured so environments like e2e that disable FoalTS HTTP logging stay quiet)
  */
@@ -99,13 +102,20 @@ export function RequestLogger(): HookDecorator {
       const logHttpRequests = Config.get('settings.logger.logHttpRequests', 'boolean', true);
       if (!enabled || !logHttpRequests) return;
 
+      const req = ctx.request as Record<string, unknown>;
+      const rawUrl: string =
+        (req['url'] as string | undefined) ?? (req['path'] as string | undefined) ?? 'UNKNOWN';
+      const pathOnly = rawUrl.split('?')[0];
+      const configuredSkipPaths = Config.get('logger.requestLogger.skipPaths', 'any', []);
+      const skipPaths = Array.isArray(configuredSkipPaths)
+        ? configuredSkipPaths.filter((value): value is string => typeof value === 'string')
+        : [];
+      if (skipPaths.includes(pathOnly)) return;
+
       const duration = Date.now() - startTime;
       const format = Config.get('logger.requestLogger.format', 'string', 'json');
 
-      const req = ctx.request as Record<string, unknown>;
       const method: string = (req['method'] as string | undefined) ?? 'UNKNOWN';
-      const rawUrl: string =
-        (req['url'] as string | undefined) ?? (req['path'] as string | undefined) ?? 'UNKNOWN';
       const url = sanitizeUrl(rawUrl);
       const statusCode: number = response.statusCode;
       const userId: number | string | undefined = ctx.user ? (ctx.user as User).id : undefined;

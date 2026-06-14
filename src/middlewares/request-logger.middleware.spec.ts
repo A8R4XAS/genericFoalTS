@@ -280,6 +280,30 @@ describe('RequestLogger middleware', () => {
         Config.get = originalGet;
       }
     });
+
+    it('should not log when request path is in logger.requestLogger.skipPaths.', () => {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalGet = Config.get;
+      Config.get = (key: string, type?: any, defaultValue?: any) => {
+        if (key === 'logger.requestLogger.skipPaths') return ['/health', '/health/live'];
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return (originalGet as (...args: unknown[]) => unknown).call(
+          Config,
+          key,
+          type,
+          defaultValue
+        );
+      };
+      try {
+        const hookFn = getHookFunction(RequestLogger());
+        const ctx = makeContext({ method: 'GET', url: '/health/live' });
+        const postHook = hookFn(ctx, services) as (r: HttpResponse) => void;
+        postHook(new HttpResponseOK());
+        strictEqual(logOutput.length, 0, 'Nothing should be logged for skipped paths');
+      } finally {
+        Config.get = originalGet;
+      }
+    });
   });
 
   describe('text format', () => {
