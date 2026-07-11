@@ -227,9 +227,10 @@ function validateReferrerPolicy(value: string): ReferrerPolicyValue {
 }
 
 function sanitizeCspReportUri(value: string): string {
-  // Reject values that could break or inject extra directives into the CSP header:
-  // must start with '/' and contain only valid URI path characters.
-  if (/^\/[^\s;]*$/.test(value)) {
+  // Only accept URI paths starting with '/' and containing safe path characters.
+  // Rejects whitespace, semicolons, and other characters that could break or
+  // inject extra directives into the CSP header value.
+  if (/^\/[a-zA-Z0-9/_\-.~%]*$/.test(value)) {
     return value;
   }
   return '/csp-violation-report';
