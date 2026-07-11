@@ -227,10 +227,10 @@ function validateReferrerPolicy(value: string): ReferrerPolicyValue {
 }
 
 function sanitizeCspReportUri(value: string): string {
-  // Reject values containing whitespace or ';' — these can break the CSP header
-  // value or inject extra directives when interpolated into the fallback header.
-  if (/[\s;]/.test(value)) {
-    return '/csp-violation-report';
+  // Reject values that could break or inject extra directives into the CSP header:
+  // must start with '/' and contain only valid URI path characters.
+  if (/^\/[^\s;]*$/.test(value)) {
+    return value;
   }
-  return value;
+  return '/csp-violation-report';
 }
