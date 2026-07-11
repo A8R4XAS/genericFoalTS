@@ -88,7 +88,10 @@ describe('SecurityHeaders hook', () => {
 
   it('should enforce HTTPS in production via 301 redirect.', () => {
     process.env.NODE_ENV = 'production';
-    mockConfig({ 'security.helmet.enforceHttpsInProduction': true });
+    mockConfig({
+      'security.helmet.enforceHttpsInProduction': true,
+      'app.baseUrl': 'https://api.example.com',
+    });
 
     const hookFn = getHookFunction(SecurityHeaders());
     const response = hookFn(
@@ -106,7 +109,11 @@ describe('SecurityHeaders hook', () => {
 
   it('should not redirect in production when request is already HTTPS via x-forwarded-proto.', () => {
     process.env.NODE_ENV = 'production';
-    mockConfig({ 'security.helmet.enforceHttpsInProduction': true });
+    mockConfig({
+      'security.helmet.enforceHttpsInProduction': true,
+      'security.helmet.trustProxy': true,
+      'app.baseUrl': 'https://api.example.com',
+    });
 
     const hookFn = getHookFunction(SecurityHeaders());
     const result = hookFn(

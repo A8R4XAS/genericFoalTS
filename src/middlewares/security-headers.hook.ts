@@ -9,7 +9,8 @@ import {
   Logger,
   ServiceManager,
 } from '@foal/core';
-import * as helmet from 'helmet';
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+const helmet = require('helmet') as typeof import('helmet').default;
 
 type ReferrerPolicyValue =
   | 'no-referrer'
@@ -50,12 +51,14 @@ export function SecurityHeaders(): HookDecorator {
       return;
     }
 
-    const cspReportUri = Config.get(
+    const rawCspReportUri = Config.get(
       'security.helmet.csp.reportUri',
       'string',
       '/csp-violation-report'
     );
-    const referrerPolicy = Config.get('security.helmet.referrerPolicy', 'string', 'no-referrer');
+    const cspReportUri = sanitizeCspReportUri(rawCspReportUri);
+    const rawReferrerPolicy = Config.get('security.helmet.referrerPolicy', 'string', 'no-referrer');
+    const referrerPolicy = validateReferrerPolicy(rawReferrerPolicy);
     const enforceHttpsInProduction = Config.get(
       'security.helmet.enforceHttpsInProduction',
       'boolean',
@@ -100,7 +103,7 @@ export function SecurityHeaders(): HookDecorator {
       noSniff: true,
       referrerPolicy: {
         // Stored in config so we can tighten/relax policy without touching code.
-        policy: referrerPolicy as ReferrerPolicyValue,
+        policy: referrerPolicy,
       },
     });
 
@@ -139,22 +142,16 @@ export function SecurityHeaders(): HookDecorator {
   });
 }
 
-function getTrustedHost(req: RequestLike): string | undefined {
-  // Prefer app.baseUrl as a trusted, server-configured source for the host.
+function getTrustedHost(_req: RequestLike): string | undefined {
+  // Only use a server-configured, trusted host. Never fall back to the
+  // client-supplied Host header — that would enable open-redirect/phishing.
   const appBaseUrl = Config.get('app.baseUrl', 'string', '');
   if (appBaseUrl) {
     try {
       return new URL(appBaseUrl).host;
     } catch {
-      // fall through to request header if baseUrl is malformed
+      // baseUrl is malformed — skip redirect
     }
-  }
-
-  // Fall back to the request Host header, validated to prevent host-header injection.
-  // Allow only characters legal in a hostname/IP with optional port.
-  const host = getRequestHeader(req, 'host');
-  if (host && /^[a-zA-Z0-9\-.:[\]]+$/.test(host)) {
-    return host;
   }
 
   return undefined;
@@ -178,9 +175,12 @@ function isHttpsRequest(req: RequestLike): boolean {
     return true;
   }
 
-  const forwardedProto = getRequestHeader(req, 'x-forwarded-proto');
-  if (typeof forwardedProto === 'string') {
-    return forwardedProto.split(',')[0].trim().toLowerCase() === 'https';
+  const trustProxy = Config.get('security.helmet.trustProxy', 'boolean', false);
+  if (trustProxy) {
+    const forwardedProto = getRequestHeader(req, 'x-forwarded-proto');
+    if (typeof forwardedProto === 'string') {
+      return forwardedProto.split(',')[0].trim().toLowerCase() === 'https';
+    }
   }
 
   return false;
@@ -196,7 +196,7 @@ function normalizeHeaderValue(value: number | string | string[]): string {
 function applyFallbackSecurityHeaders(
   response: HttpResponse,
   cspReportUri: string,
-  referrerPolicy: string
+  referrerPolicy: ReferrerPolicyValue
 ): void {
   response.setHeader('X-Frame-Options', 'DENY');
   response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -205,4 +205,32 @@ function applyFallbackSecurityHeaders(
     'Content-Security-Policy',
     `default-src 'self'; frame-ancestors 'none'; object-src 'none'; report-uri ${cspReportUri}`
   );
+}
+
+const VALID_REFERRER_POLICIES: ReferrerPolicyValue[] = [
+  'no-referrer',
+  'no-referrer-when-downgrade',
+  'same-origin',
+  'origin',
+  'strict-origin',
+  'origin-when-cross-origin',
+  'strict-origin-when-cross-origin',
+  'unsafe-url',
+  '',
+];
+
+function validateReferrerPolicy(value: string): ReferrerPolicyValue {
+  if ((VALID_REFERRER_POLICIES as string[]).includes(value)) {
+    return value as ReferrerPolicyValue;
+  }
+  return 'no-referrer';
+}
+
+function sanitizeCspReportUri(value: string): string {
+  // Reject values containing whitespace or ';' — these can break the CSP header
+  // value or inject extra directives when interpolated into the fallback header.
+  if (/[\s;]/.test(value)) {
+    return '/csp-violation-report';
+  }
+  return value;
 }

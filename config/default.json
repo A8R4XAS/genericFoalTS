@@ -59,6 +59,7 @@
     "helmet": {
       "enabled": true,
       "enforceHttpsInProduction": true,
+      "trustProxy": false,
       "referrerPolicy": "no-referrer",
       "csp": {
         "reportUri": "/csp-violation-report"
