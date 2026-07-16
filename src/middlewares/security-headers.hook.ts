@@ -5,12 +5,25 @@ import {
   Hook,
   HookDecorator,
   HttpResponse,
-  HttpResponseMovedPermanently,
+  HttpResponseRedirection,
   Logger,
   ServiceManager,
 } from '@foal/core';
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
 const helmet = require('helmet') as typeof import('helmet').default;
+
+/**
+ * 308 Permanent Redirect: like 301 but preserves the HTTP method and body.
+ * This prevents POST/PUT requests (e.g., CSP reports) from being downgraded
+ * to GET when the browser follows the HTTPS redirect.
+ */
+class HttpResponsePermanentRedirect extends HttpResponseRedirection {
+  readonly statusCode = 308;
+  readonly statusMessage = 'PERMANENT REDIRECT';
+  constructor(public path: string) {
+    super();
+  }
+}
 
 type ReferrerPolicyValue =
   | 'no-referrer'
@@ -71,7 +84,7 @@ export function SecurityHeaders(): HookDecorator {
       if (typeof url === 'string') {
         const trustedHost = getTrustedHost(req);
         if (trustedHost) {
-          return new HttpResponseMovedPermanently(`https://${trustedHost}${url}`);
+          return new HttpResponsePermanentRedirect(`https://${trustedHost}${url}`);
         }
       }
     }

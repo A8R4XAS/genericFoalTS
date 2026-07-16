@@ -63,9 +63,21 @@ function serializeCspReportForLog(payload: unknown): string {
   for (const key of ['blocked-uri', 'violated-directive', 'effective-directive', 'document-uri']) {
     const value = report[key];
     if (typeof value === 'string') {
-      safeReport[key] = value.slice(0, 300);
+      // Strip query string and fragment from document-uri to avoid logging tokens/PII.
+      const sanitized = key === 'document-uri' ? sanitizeDocumentUri(value) : value;
+      safeReport[key] = sanitized.slice(0, 300);
     }
   }
 
   return JSON.stringify(safeReport);
+}
+
+function sanitizeDocumentUri(value: string): string {
+  try {
+    const url = new URL(value);
+    return url.origin + url.pathname;
+  } catch {
+    // Not a valid absolute URL; strip query string and fragment manually.
+    return value.split('?')[0].split('#')[0];
+  }
 }

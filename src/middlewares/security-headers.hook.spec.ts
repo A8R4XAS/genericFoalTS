@@ -84,9 +84,12 @@ describe('SecurityHeaders hook', () => {
         'report-uri /csp-violation-report'
       )
     );
+    // img-src is configured only in the Helmet path, not in applyFallbackSecurityHeaders.
+    // This assertion verifies Helmet integration ran successfully.
+    ok(String(response.getHeader('Content-Security-Policy')).includes('img-src'));
   });
 
-  it('should enforce HTTPS in production via 301 redirect.', () => {
+  it('should enforce HTTPS in production via 308 redirect.', () => {
     process.env.NODE_ENV = 'production';
     mockConfig({
       'security.helmet.enforceHttpsInProduction': true,
@@ -103,7 +106,7 @@ describe('SecurityHeaders hook', () => {
       makeServices()
     ) as any;
 
-    strictEqual(response.statusCode, 301);
+    strictEqual(response.statusCode, 308);
     strictEqual(response.path, 'https://api.example.com/api/profile?tab=security');
   });
 
