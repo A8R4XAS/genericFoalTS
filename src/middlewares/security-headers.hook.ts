@@ -139,9 +139,13 @@ export function SecurityHeaders(): HookDecorator {
       // Helmet is implemented for Express response objects.
       // We run it against a tiny in-memory response object and then mirror the
       // produced headers onto FoalTS' HttpResponse.
-      helmetMiddleware(req as any, fakeResponse as any, (err?: unknown) => {
+      try {
+        helmetMiddleware(req as any, fakeResponse as any, (err?: unknown) => {
+          middlewareError = err;
+        });
+      } catch (err) {
         middlewareError = err;
-      });
+      }
 
       if (middlewareError) {
         logger.error(`Helmet middleware failed: ${String(middlewareError)}`);
