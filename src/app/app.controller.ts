@@ -65,7 +65,9 @@ function serializeCspReportForLog(payload: unknown): string {
     if (typeof value === 'string') {
       // Strip query string and fragment from document-uri to avoid logging tokens/PII.
       const sanitized = key === 'document-uri' ? sanitizeDocumentUri(value) : value;
-      safeReport[key] = sanitized.slice(0, 300);
+      // Strip ASCII control characters (including \n and \r) to prevent log injection.
+      // eslint-disable-next-line no-control-regex
+      safeReport[key] = sanitized.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 300);
     }
   }
 

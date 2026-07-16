@@ -81,7 +81,9 @@ export function SecurityHeaders(): HookDecorator {
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction && enforceHttpsInProduction && !isHttpsRequest(req)) {
       const url = typeof req.originalUrl === 'string' ? req.originalUrl : req.url;
-      if (typeof url === 'string') {
+      // Only redirect when url is an origin-form path (starts with '/' but not '//').
+      // Absolute-form or authority-form request targets are not safe to concatenate.
+      if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) {
         const trustedHost = getTrustedHost(req);
         if (trustedHost) {
           return new HttpResponsePermanentRedirect(`https://${trustedHost}${url}`);
@@ -241,9 +243,9 @@ function validateReferrerPolicy(value: string): ReferrerPolicyValue {
 
 function sanitizeCspReportUri(value: string): string {
   // Only accept URI paths starting with '/' and containing safe path characters.
-  // Rejects whitespace, semicolons, and other characters that could break or
-  // inject extra directives into the CSP header value.
-  if (/^\/[a-zA-Z0-9/_\-.~%]*$/.test(value)) {
+  // Rejects whitespace, semicolons, scheme-relative URLs (//) and other characters
+  // that could break or inject extra directives into the CSP header value.
+  if (/^\/(?!\/)[a-zA-Z0-9/_\-.~%]*$/.test(value)) {
     return value;
   }
   return '/csp-violation-report';

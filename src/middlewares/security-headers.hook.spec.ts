@@ -131,4 +131,26 @@ describe('SecurityHeaders hook', () => {
 
     strictEqual(typeof result, 'function');
   });
+
+  it('should not redirect in production when URL is not an origin-form path.', () => {
+    process.env.NODE_ENV = 'production';
+    mockConfig({
+      'security.helmet.enforceHttpsInProduction': true,
+      'app.baseUrl': 'https://api.example.com',
+    });
+
+    const hookFn = getHookFunction(SecurityHeaders());
+    // scheme-relative URL that could produce an open redirect
+    const result = hookFn(
+      makeContext({
+        secure: false,
+        url: '//evil.com/path',
+        originalUrl: '//evil.com/path',
+      }),
+      makeServices()
+    );
+
+    // Should fall through to the post-hook function, not return a redirect.
+    strictEqual(typeof result, 'function');
+  });
 });
