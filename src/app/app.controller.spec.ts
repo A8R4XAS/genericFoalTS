@@ -44,9 +44,14 @@ describe('AppController', () => {
 
         controller.receiveCspViolationReport(ctx);
 
-        ok(!logged.includes('token=secret'), 'query string should be stripped from document-uri');
-        ok(!logged.includes('#hash'), 'fragment should be stripped from document-uri');
-        ok(logged.includes('https://example.com/page'), 'origin and pathname should be retained');
+        const logPrefix = 'CSP violation report: ';
+        ok(logged.startsWith(logPrefix), 'should log a CSP violation report');
+        const logData = JSON.parse(logged.slice(logPrefix.length)) as Record<string, string>;
+        strictEqual(
+          logData['document-uri'],
+          'https://example.com/page',
+          'query string and fragment should be stripped from document-uri'
+        );
       } finally {
         console.warn = originalWarn;
       }

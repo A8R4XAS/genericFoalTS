@@ -19,7 +19,7 @@ const helmet = require('helmet') as typeof import('helmet').default;
  */
 class HttpResponsePermanentRedirect extends HttpResponseRedirection {
   readonly statusCode = 308;
-  readonly statusMessage = 'PERMANENT REDIRECT';
+  readonly statusMessage = 'Permanent Redirect';
   constructor(public path: string) {
     super();
   }
