@@ -33,8 +33,7 @@ type ReferrerPolicyValue =
   | 'strict-origin'
   | 'origin-when-cross-origin'
   | 'strict-origin-when-cross-origin'
-  | 'unsafe-url'
-  | '';
+  | 'unsafe-url';
 
 type RequestLike = {
   method?: string;
@@ -231,7 +230,6 @@ const VALID_REFERRER_POLICIES: ReferrerPolicyValue[] = [
   'origin-when-cross-origin',
   'strict-origin-when-cross-origin',
   'unsafe-url',
-  '',
 ];
 
 function validateReferrerPolicy(value: string): ReferrerPolicyValue {
