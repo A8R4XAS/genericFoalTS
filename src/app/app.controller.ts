@@ -78,6 +78,6 @@ function sanitizeDocumentUri(value: string): string {
     return url.origin + url.pathname;
   } catch {
     // Not a valid absolute URL; strip query string and fragment manually.
-    return value.split('?')[0].split('#')[0];
+    return value.replace(/[?#].*$/, '');
   }
 }
