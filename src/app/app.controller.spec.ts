@@ -11,6 +11,7 @@ describe('AppController', () => {
   describe('receiveCspViolationReport', () => {
     it('should return 204 No Content.', () => {
       const controller = new AppController();
+      controller.logger = { warn: () => undefined } as any;
       const ctx = new Context({
         method: 'POST',
         url: '/csp-violation-report',
@@ -31,6 +32,11 @@ describe('AppController', () => {
 
       try {
         const controller = new AppController();
+        controller.logger = {
+          warn: (msg: string) => {
+            logged = msg;
+          },
+        } as any;
         const ctx = new Context({
           method: 'POST',
           url: '/csp-violation-report',
@@ -65,6 +71,11 @@ describe('AppController', () => {
 
       try {
         const controller = new AppController();
+        controller.logger = {
+          warn: (msg: string) => {
+            logged = msg;
+          },
+        } as any;
         const ctx = new Context({
           method: 'POST',
           url: '/csp-violation-report',

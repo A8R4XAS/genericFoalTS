@@ -92,4 +92,13 @@ describe('PermissionRequired hook', () => {
 
     ok(response === undefined, 'Expected no response (request proceeds)');
   });
+
+  it('should return nothing when a MODERATOR accesses READ_ANY_PROFILE.', () => {
+    const hookFn = getHookFunction(PermissionRequired(Permission.READ_ANY_PROFILE));
+    const ctx = makeContextWithUser({ role: UserRole.MODERATOR });
+
+    const response = hookFn(ctx, new ServiceManager());
+
+    ok(response === undefined, 'Expected no response (request proceeds)');
+  });
 });

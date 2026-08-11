@@ -19,7 +19,7 @@ import {
 } from '@foal/core';
 
 import { Cors, RequestLogger, SecurityHeaders } from '../middlewares';
-import { ApiController, AuthController, HealthController } from './controllers';
+import { AdminController, ApiController, AuthController, HealthController } from './controllers';
 import { AppError, ValidationError } from './errors';
 import { RateLimit } from './hooks';
 import { ZodError } from 'zod';
@@ -48,6 +48,7 @@ export class AppController implements IAppController {
   subControllers = [
     controller('/api', ApiController),
     controller('/api/auth', AuthController),
+    controller('/api/admin', AdminController),
     controller('/health', HealthController),
   ];
 
@@ -167,7 +168,9 @@ export class AppController implements IAppController {
   @RateLimit('default')
   @Post('/csp-violation-report')
   receiveCspViolationReport(ctx: Context): HttpResponseNoContent {
-    console.warn(`CSP violation report: ${serializeCspReportForLog((ctx.request as any).body)}`);
+    this.logger.warn(
+      `CSP violation report: ${serializeCspReportForLog((ctx.request as any).body)}`
+    );
     return new HttpResponseNoContent();
   }
 }

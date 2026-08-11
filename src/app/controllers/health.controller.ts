@@ -4,7 +4,7 @@ import { dataSource } from '../../db';
 /** Minimal 503 response – FoalTS v5 does not ship one out of the box. */
 class HttpResponseServiceUnavailable extends HttpResponseServerError {
   readonly statusCode = 503;
-  readonly statusMessage = 'SERVICE UNAVAILABLE';
+  readonly statusMessage = 'Service Unavailable';
 }
 
 export class HealthController {

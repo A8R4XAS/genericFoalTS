@@ -29,8 +29,14 @@ const ALL_PERMISSIONS = Object.values(Permission) as Permission[];
  * Role-to-permission mapping.
  * Each role is granted a specific set of permissions.
  */
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+const ROLE_PERMISSIONS_BY_ROLE: Record<UserRole, Permission[]> = {
   [UserRole.USER]: [Permission.READ_OWN_PROFILE, Permission.UPDATE_OWN_PROFILE],
+  [UserRole.MODERATOR]: [
+    Permission.READ_OWN_PROFILE,
+    Permission.UPDATE_OWN_PROFILE,
+    Permission.READ_ANY_PROFILE,
+    Permission.UPDATE_ANY_PROFILE,
+  ],
   [UserRole.ADMIN]: ALL_PERMISSIONS,
 };
 
@@ -51,7 +57,7 @@ export function PermissionRequired(permission: Permission): HookDecorator {
       return new HttpResponseUnauthorized({ error: 'Authentication required' });
     }
 
-    const userPermissions = ROLE_PERMISSIONS[user.role] ?? [];
+    const userPermissions = ROLE_PERMISSIONS_BY_ROLE[user.role] ?? [];
 
     if (!userPermissions.includes(permission)) {
       return new HttpResponseForbidden({ error: 'Insufficient permissions' });
