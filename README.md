@@ -11,6 +11,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
   - [📦 Voraussetzungen](#-voraussetzungen)
   - [🚀 Installation](#-installation)
   - [⚙️ Konfiguration](#️-konfiguration)
+    - [Rate Limiting](#rate-limiting)
   - [💻 Entwicklung](#-entwicklung)
     - [Development-Server starten](#development-server-starten)
     - [Hot Reload](#hot-reload)
@@ -111,6 +112,32 @@ Die Anwendung nutzt verschiedene Konfigurationsdateien im `config/` Verzeichnis:
 - `production.json` - Production-Umgebung
 
 Weitere Details zur Datenbank-Konfiguration findest du in [DATABASE_CONFIG.md](DATABASE_CONFIG.md).
+
+### Rate Limiting
+
+Rate Limiting schützt die API, indem es begrenzt, wie viele Anfragen ein einzelner Client
+pro Zeitfenster stellen darf. Wird das Limit überschritten, antwortet der Server mit
+`429 Too Many Requests` und einem `Retry-After`-Header.
+
+Es gibt zwei vordefinierte Profile:
+
+| Profil | Verwendung | Standard |
+|--------|-----------|---------|
+| `default` | Normale API-Endpunkte (`ApiController`) | 120 Anfragen / 60 s |
+| `auth` | Auth-Endpunkte (`AuthController`) | 60 Anfragen / 60 s |
+
+Einzelne Endpunkte können über `rateLimit.endpoints` in `config/default.json` mit
+eigenen, schärferen Limits versehen werden – z. B. `AuthController.login: 15/60s`.
+
+Alle Responses enthalten `RateLimit-*`- und `X-RateLimit-*`-Header mit dem aktuellen
+Zählerstand.
+
+> **Hinweis:** Die aktuelle Implementierung nutzt einen In-Memory-Store. Für verteilte
+> Deployments (mehrere Server-Instanzen) sollte ein gemeinsamer Store wie **Redis**
+> verwendet werden.
+
+Eine ausführliche Erklärung – inklusive Begriffserklärungen, Konfigurationsbeispiele und
+häufige Fragen – findest du in [RATE_LIMITING.md](RATE_LIMITING.md).
 
 ## 💻 Entwicklung
 

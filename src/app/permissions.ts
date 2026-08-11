@@ -17,13 +17,13 @@ export type Permission =
  *
  * Kept private to this module and frozen to prevent runtime mutation.
  */
-const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>> = Object.freeze({
-  [UserRole.USER]: Object.freeze(['read:profile']),
+export const ROLE_PERMISSIONS = Object.freeze({
+  [UserRole.USER]: Object.freeze(['read:profile'] as Permission[]),
   [UserRole.MODERATOR]: Object.freeze([
     'read:profile',
     'read:users',
     'moderate:content',
-  ]),
+  ] as Permission[]),
   [UserRole.ADMIN]: Object.freeze([
     'read:profile',
     'read:users',
@@ -31,8 +31,8 @@ const ROLE_PERMISSIONS: Readonly<Record<UserRole, readonly Permission[]>> = Obje
     'delete:users',
     'assign:roles',
     'moderate:content',
-  ]),
-});
+  ] as Permission[]),
+}) satisfies Readonly<Record<UserRole, readonly Permission[]>>;
 
 /**
  * Returns true if the given role has the specified permission.
