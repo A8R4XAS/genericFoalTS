@@ -62,10 +62,10 @@
     "requestHeaderName": "x-csrf-token",
     "responseHeaderName": "X-CSRF-Token",
     "cookiePath": "/",
-    "cookieHttpOnly": true,
+    "cookieHttpOnly": false,
     "cookieSameSite": "strict",
-    "cookieSecure": false,
     "skipForJwtBearer": true,
+    "rotateOnLoginMethod": "POST",
     "rotateOnLoginPath": "/api/auth/login",
     "exemptPaths": "/csp-violation-report"
   },

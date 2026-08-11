@@ -18,9 +18,32 @@ type RequestLike = {
   get?: (headerName: string) => string | undefined;
 };
 
+type CsrfCookieOptions = {
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite: 'Strict' | 'Lax' | 'None';
+};
+
 export function CsrfProtection(): HookDecorator {
+  const enabled = Config.get('csrf.enabled', 'boolean', true);
+  const cookieName = Config.get('csrf.cookieName', 'string', 'csrf_token');
+  const requestHeaderName = Config.get('csrf.requestHeaderName', 'string', 'x-csrf-token');
+  const responseHeaderName = Config.get('csrf.responseHeaderName', 'string', 'X-CSRF-Token');
+  const loginPath = Config.get('csrf.rotateOnLoginPath', 'string', '/api/auth/login');
+  const loginMethod = Config.get('csrf.rotateOnLoginMethod', 'string', 'POST').toUpperCase();
+  const exemptPaths = parseExemptPaths(
+    Config.get('csrf.exemptPaths', 'string', '/csp-violation-report')
+  );
+  const skipForJwtBearer = Config.get('csrf.skipForJwtBearer', 'boolean', true);
+  const cookieOptions: CsrfCookieOptions = {
+    path: Config.get('csrf.cookiePath', 'string', '/'),
+    secure: Config.get('csrf.cookieSecure', 'boolean', process.env.NODE_ENV === 'production'),
+    httpOnly: Config.get('csrf.cookieHttpOnly', 'boolean', false),
+    sameSite: normalizeSameSite(Config.get('csrf.cookieSameSite', 'string', 'strict')),
+  };
+
   return Hook((ctx: Context) => {
-    const enabled = Config.get('csrf.enabled', 'boolean', true);
     if (!enabled) {
       return;
     }
@@ -28,17 +51,9 @@ export function CsrfProtection(): HookDecorator {
     const request = ctx.request as RequestLike;
     const method = (request.method ?? 'GET').toUpperCase();
     const path = getRequestPath(request);
-    const cookieName = Config.get('csrf.cookieName', 'string', 'csrf_token');
-    const requestHeaderName = Config.get('csrf.requestHeaderName', 'string', 'x-csrf-token');
-    const responseHeaderName = Config.get('csrf.responseHeaderName', 'string', 'X-CSRF-Token');
-    const loginPath = Config.get('csrf.rotateOnLoginPath', 'string', '/api/auth/login');
-    const exemptPaths = parseExemptPaths(
-      Config.get('csrf.exemptPaths', 'string', '/csp-violation-report')
-    );
 
     const cookies = parseCookies(getRequestHeader(request, 'cookie'));
     const csrfCookieToken = cookies[cookieName];
-    const skipForJwtBearer = Config.get('csrf.skipForJwtBearer', 'boolean', true);
     const hasJwtBearerToken =
       skipForJwtBearer &&
       getRequestHeader(request, 'authorization')?.startsWith('Bearer ') === true;
@@ -49,17 +64,23 @@ export function CsrfProtection(): HookDecorator {
     if (shouldValidateToken && !areTokensEqual(csrfCookieToken, csrfHeaderToken)) {
       const response = new HttpResponseForbidden({ error: 'Invalid CSRF token' });
       const bootstrapToken = generateCsrfToken();
-      applyCsrfToResponse(response, cookieName, bootstrapToken, responseHeaderName);
+      applyCsrfToResponse(response, cookieName, bootstrapToken, responseHeaderName, cookieOptions);
       return response;
     }
 
-    const shouldRotateToken = method === 'POST' && path === loginPath;
+    const shouldRotateToken = method === loginMethod && path === loginPath;
     const csrfResponseToken = shouldRotateToken
       ? generateCsrfToken()
       : csrfCookieToken || generateCsrfToken();
 
     return (response: HttpResponse) => {
-      applyCsrfToResponse(response, cookieName, csrfResponseToken, responseHeaderName);
+      applyCsrfToResponse(
+        response,
+        cookieName,
+        csrfResponseToken,
+        responseHeaderName,
+        cookieOptions
+      );
     };
   });
 }
@@ -161,36 +182,41 @@ function applyCsrfToResponse(
   response: HttpResponse,
   cookieName: string,
   csrfToken: string,
-  responseHeaderName: string
+  responseHeaderName: string,
+  cookieOptions: CsrfCookieOptions
 ): void {
-  appendSetCookieHeader(response, serializeCookie(cookieName, csrfToken));
+  appendSetCookieHeader(response, serializeCookie(cookieName, csrfToken, cookieOptions));
   response.setHeader(responseHeaderName, csrfToken);
 }
 
 function appendSetCookieHeader(response: HttpResponse, cookie: string): void {
-  const current = response.getHeader('Set-Cookie');
+  const headerBag = response as unknown as {
+    getHeader: (name: string) => string | string[] | undefined;
+    setHeader: (name: string, value: string | string[]) => void;
+  };
+
+  const current = headerBag.getHeader('Set-Cookie');
   if (!current) {
-    response.setHeader('Set-Cookie', cookie);
+    headerBag.setHeader('Set-Cookie', cookie);
     return;
   }
 
-  const serializedCurrent = Array.isArray(current)
-    ? current.map(value => String(value)).join(', ')
-    : String(current);
-  response.setHeader('Set-Cookie', `${serializedCurrent}, ${cookie}`);
+  const currentValues = Array.isArray(current)
+    ? current.map(value => String(value))
+    : [String(current)];
+  headerBag.setHeader('Set-Cookie', [...currentValues, cookie]);
 }
 
-function serializeCookie(name: string, value: string): string {
-  const path = Config.get('csrf.cookiePath', 'string', '/');
-  const secure = Config.get('csrf.cookieSecure', 'boolean', process.env.NODE_ENV === 'production');
-  const httpOnly = Config.get('csrf.cookieHttpOnly', 'boolean', true);
-  const sameSite = normalizeSameSite(Config.get('csrf.cookieSameSite', 'string', 'strict'));
-
-  const parts = [`${name}=${encodeURIComponent(value)}`, `Path=${path}`, `SameSite=${sameSite}`];
-  if (httpOnly) {
+function serializeCookie(name: string, value: string, options: CsrfCookieOptions): string {
+  const parts = [
+    `${name}=${encodeURIComponent(value)}`,
+    `Path=${options.path}`,
+    `SameSite=${options.sameSite}`,
+  ];
+  if (options.httpOnly) {
     parts.push('HttpOnly');
   }
-  if (secure || sameSite === 'None') {
+  if (options.secure || options.sameSite === 'None') {
     parts.push('Secure');
   }
   return parts.join('; ');

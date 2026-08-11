@@ -60,6 +60,7 @@ describe('CsrfProtection hook', () => {
 
     ok(response.getHeader('Set-Cookie'), 'Expected Set-Cookie header');
     ok(response.getHeader('X-CSRF-Token'), 'Expected X-CSRF-Token header');
+    ok(!String(response.getHeader('Set-Cookie')).includes('HttpOnly'));
   });
 
   it('should reject state-changing requests with missing token and issue a bootstrap token.', () => {
@@ -140,5 +141,29 @@ describe('CsrfProtection hook', () => {
     const cookieToken = extractCsrfTokenFromCookieHeader(response.getHeader('Set-Cookie'));
     strictEqual(rotatedToken === initialToken, false);
     strictEqual(cookieToken, rotatedToken);
+  });
+
+  it('should honor a custom login rotation method from config.', () => {
+    mockConfig({ 'csrf.rotateOnLoginMethod': 'PUT' });
+
+    const initialToken = 'initial-token';
+    const hookFn = getHookFunction(CsrfProtection());
+    const postHook = hookFn(
+      makeContext({
+        method: 'PUT',
+        path: '/api/auth/login',
+        headers: {
+          cookie: `csrf_token=${initialToken}`,
+          'x-csrf-token': initialToken,
+        },
+      }),
+      new ServiceManager()
+    ) as (response: HttpResponseOK) => void;
+
+    const response = new HttpResponseOK();
+    postHook(response);
+
+    const rotatedToken = String(response.getHeader('X-CSRF-Token'));
+    strictEqual(rotatedToken === initialToken, false);
   });
 });
