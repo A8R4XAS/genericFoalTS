@@ -13,6 +13,20 @@ import { dataSource } from '../db';
 describe('[E2E] User Registration', () => {
   let app: any;
 
+  async function postWithCsrf(
+    path: string,
+    payload: Record<string, unknown>,
+    expectedStatus: number
+  ) {
+    const csrfResponse = await request(app).get('/health').expect(200);
+    return request(app)
+      .post(path)
+      .set('X-CSRF-Token', csrfResponse.headers['x-csrf-token'] as string)
+      .set('Cookie', csrfResponse.headers['set-cookie'] as string[])
+      .send(payload)
+      .expect(expectedStatus);
+  }
+
   before(async () => {
     await dataSource.initialize();
     app = await createApp(AppController);
@@ -29,22 +43,23 @@ describe('[E2E] User Registration', () => {
 
   describe('POST /api/auth/register', () => {
     it('should successfully register a new user with valid data', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'newuser@example.com',
           password: 'SecurePass123',
           firstName: 'Alice',
           lastName: 'Johnson',
-        })
-        .expect(201);
+        },
+        201
+      );
 
       strictEqual(response.body.email, 'newuser@example.com');
       strictEqual(response.body.firstName, 'Alice');
       strictEqual(response.body.lastName, 'Johnson');
       strictEqual(response.body.isVerified, false);
       ok(response.body.id, 'Should have user id');
-      ok(response.body.verificationToken, 'Should have verification token');
+      ok(!response.body.verificationToken, 'Should not include verification token in response');
       ok(!response.body.password, 'Should not include password in response');
 
       // Verify user is saved in database with hashed password
@@ -63,44 +78,47 @@ describe('[E2E] User Registration', () => {
       await existingUser.save();
 
       // Try to register with same email
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'existing@example.com',
           password: 'DifferentPass123',
           firstName: 'New',
           lastName: 'User',
-        })
-        .expect(409);
+        },
+        409
+      );
 
       strictEqual(response.body.error, 'Email already registered');
     });
 
     it('should reject registration with invalid email (400 Bad Request)', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'not-an-email',
           password: 'Password123',
           firstName: 'John',
           lastName: 'Doe',
-        })
-        .expect(400);
+        },
+        400
+      );
 
       strictEqual(response.body.error, 'Validation failed');
       ok(Array.isArray(response.body.details), 'Should have validation details');
     });
 
     it('should reject registration with weak password - too short', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'test@example.com',
           password: 'Pass1',
           firstName: 'John',
           lastName: 'Doe',
-        })
-        .expect(400);
+        },
+        400
+      );
 
       strictEqual(response.body.error, 'Validation failed');
       const passwordError = response.body.details.find((d: any) => d.field === 'password');
@@ -108,57 +126,61 @@ describe('[E2E] User Registration', () => {
     });
 
     it('should reject registration with weak password - no uppercase', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'test@example.com',
           password: 'password123',
           firstName: 'John',
           lastName: 'Doe',
-        })
-        .expect(400);
+        },
+        400
+      );
 
       strictEqual(response.body.error, 'Validation failed');
     });
 
     it('should reject registration with weak password - no number', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'test@example.com',
           password: 'PasswordABC',
           firstName: 'John',
           lastName: 'Doe',
-        })
-        .expect(400);
+        },
+        400
+      );
 
       strictEqual(response.body.error, 'Validation failed');
     });
 
     it('should reject registration with missing required fields', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'incomplete@example.com',
           password: 'Password123',
           // Missing firstName and lastName
-        })
-        .expect(400);
+        },
+        400
+      );
 
       strictEqual(response.body.error, 'Validation failed');
       ok(response.body.details.length >= 2, 'Should have multiple validation errors');
     });
 
     it('should normalize email to lowercase', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
+      const response = await postWithCsrf(
+        '/api/auth/register',
+        {
           email: 'TEST@EXAMPLE.COM',
           password: 'Password123',
           firstName: 'John',
           lastName: 'Doe',
-        })
-        .expect(201);
+        },
+        201
+      );
 
       strictEqual(
         response.body.email,

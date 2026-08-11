@@ -18,7 +18,7 @@ import {
   Post,
 } from '@foal/core';
 
-import { Cors, RequestLogger, SecurityHeaders } from '../middlewares';
+import { Cors, CsrfProtection, RequestLogger, SecurityHeaders } from '../middlewares';
 import { AdminController, ApiController, AuthController, HealthController } from './controllers';
 import { AppError, ValidationError } from './errors';
 import { RateLimit } from './hooks';
@@ -41,6 +41,7 @@ class DynamicClientErrorResponse extends HttpResponseClientError {
 
 @SecurityHeaders()
 @Cors()
+@CsrfProtection()
 @RequestLogger()
 export class AppController implements IAppController {
   @dependency
