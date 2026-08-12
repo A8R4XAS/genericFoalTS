@@ -119,6 +119,27 @@ describe('SecurityHeaders hook', () => {
     ok(String(response.getHeader('Content-Security-Policy')).includes('upgrade-insecure-requests'));
   });
 
+  it('should not emit HSTS or Expect-CT in production when request is plain HTTP.', () => {
+    // Regression: transport-security headers must never be sent over plain HTTP.
+    // An HTTP client that receives HSTS will be locked out of HTTP for maxAge seconds.
+    process.env.NODE_ENV = 'production';
+    mockConfig({
+      // Disable HTTPS enforcement so the hook doesn't redirect and we can inspect response headers.
+      'security.helmet.enforceHttpsInProduction': false,
+    });
+
+    const hookFn = getHookFunction(SecurityHeaders());
+    const postHook = hookFn(makeContext({ secure: false }), makeServices()) as (
+      response: HttpResponseOK
+    ) => void;
+    const response = new HttpResponseOK();
+    postHook(response);
+
+    // HSTS and Expect-CT must be absent on plain-HTTP responses.
+    strictEqual(response.getHeader('Strict-Transport-Security'), undefined);
+    strictEqual(response.getHeader('Expect-CT'), undefined);
+  });
+
   it('should enforce HTTPS in production via 308 redirect.', () => {
     process.env.NODE_ENV = 'production';
     mockConfig({

@@ -93,6 +93,9 @@ export function SecurityHeaders(): HookDecorator {
     );
 
     const isProduction = process.env.NODE_ENV === 'production';
+    // isHttps is true when the request arrived over a secure channel (TLS or trusted proxy).
+    // We compute it once here so helper functions don't need access to `req`.
+    const isHttps = isHttpsRequest(req);
     if (isProduction && enforceHttpsInProduction && !isHttpsRequest(req)) {
       const url = typeof req.originalUrl === 'string' ? req.originalUrl : req.url;
       // Only redirect when url is an origin-form path (starts with '/' but not '//').
@@ -129,13 +132,16 @@ export function SecurityHeaders(): HookDecorator {
         },
       },
       frameguard: { action: 'deny' },
-      hsts: isProduction
-        ? {
-            maxAge: HSTS_MAX_AGE_SECONDS,
-            includeSubDomains: true,
-            preload: true,
-          }
-        : false,
+      // HSTS must only be sent over HTTPS. Enabling it on HTTP responses can
+      // prevent browsers from ever reaching the site over plain HTTP again.
+      hsts:
+        isProduction && isHttps
+          ? {
+              maxAge: HSTS_MAX_AGE_SECONDS,
+              includeSubDomains: true,
+              preload: true,
+            }
+          : false,
       noSniff: true,
       referrerPolicy: {
         // Stored in config so we can tighten/relax policy without touching code.
@@ -171,7 +177,14 @@ export function SecurityHeaders(): HookDecorator {
 
       if (middlewareError) {
         logger.error(`Helmet middleware failed: ${String(middlewareError)}`);
-        applyFallbackSecurityHeaders(response, cspReportUri, referrerPolicy, isProduction);
+        // isProduction && isHttps ensures transport-security headers (HSTS, Expect-CT)
+        // are only emitted over HTTPS — never over plain HTTP.
+        applyFallbackSecurityHeaders(
+          response,
+          cspReportUri,
+          referrerPolicy,
+          isProduction && isHttps
+        );
         return;
       }
 
@@ -179,7 +192,8 @@ export function SecurityHeaders(): HookDecorator {
         response.setHeader(name, normalizeHeaderValue(value));
       }
 
-      applyManualSecurityHeaders(response, isProduction);
+      // isProduction && isHttps ensures Expect-CT is only emitted over HTTPS.
+      applyManualSecurityHeaders(response, isProduction && isHttps);
     };
   });
 }
