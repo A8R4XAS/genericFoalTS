@@ -79,7 +79,8 @@ describe('[E2E] User Login & Token Refresh', () => {
           password: 'Password123',
           firstName: 'Wrong',
           lastName: 'Pass',
-        });
+        })
+        .expect(201);
 
       const response = await request(app)
         .post('/api/auth/login')
@@ -149,7 +150,8 @@ describe('[E2E] User Login & Token Refresh', () => {
           password: 'Password123',
           firstName: 'Refresh',
           lastName: 'Test',
-        });
+        })
+        .expect(201);
 
       const loginRes = await request(app)
         .post('/api/auth/login')

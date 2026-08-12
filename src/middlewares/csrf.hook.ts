@@ -56,7 +56,7 @@ export function CsrfProtection(): HookDecorator {
     const csrfCookieToken = cookies[cookieName];
     const hasJwtBearerToken =
       skipForJwtBearer &&
-      getRequestHeader(request, 'authorization')?.startsWith('Bearer ') === true;
+      /^bearer /i.test(getRequestHeader(request, 'authorization') ?? '') === true;
     const isExemptPath = exemptPaths.some(pattern => matchPathPattern(path, pattern));
     const shouldValidateToken = !SAFE_METHODS.has(method) && !isExemptPath && !hasJwtBearerToken;
 
@@ -68,12 +68,13 @@ export function CsrfProtection(): HookDecorator {
       return response;
     }
 
-    const shouldRotateToken = method === loginMethod && path === loginPath;
-    const csrfResponseToken = shouldRotateToken
-      ? generateCsrfToken()
-      : csrfCookieToken || generateCsrfToken();
+    const isLoginEndpoint = method === loginMethod && path === loginPath;
+    const staticCsrfToken = csrfCookieToken || generateCsrfToken();
 
     return (response: HttpResponse) => {
+      const shouldRotateToken =
+        isLoginEndpoint && response.statusCode >= 200 && response.statusCode < 300;
+      const csrfResponseToken = shouldRotateToken ? generateCsrfToken() : staticCsrfToken;
       applyCsrfToResponse(
         response,
         cookieName,

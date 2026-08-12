@@ -2,7 +2,7 @@
 import { ok, strictEqual } from 'assert';
 
 // 3p
-import { Config, Context, getHookFunction, HttpResponseOK, ServiceManager } from '@foal/core';
+import { Config, Context, getHookFunction, HttpResponseOK, HttpResponseUnauthorized, ServiceManager } from '@foal/core';
 
 // App
 import { CsrfProtection } from './csrf.hook';
@@ -117,6 +117,24 @@ describe('CsrfProtection hook', () => {
     strictEqual(typeof result, 'function');
   });
 
+  it('should skip CSRF validation when a lowercase bearer token is provided.', () => {
+    mockConfig({});
+
+    const hookFn = getHookFunction(CsrfProtection());
+    const result = hookFn(
+      makeContext({
+        method: 'POST',
+        path: '/api/resource',
+        headers: {
+          authorization: 'bearer token',
+        },
+      }),
+      new ServiceManager()
+    );
+
+    strictEqual(typeof result, 'function');
+  });
+
   it('should rotate the CSRF token after a successful login response.', () => {
     mockConfig({});
 
@@ -141,6 +159,30 @@ describe('CsrfProtection hook', () => {
     const cookieToken = extractCsrfTokenFromCookieHeader(response.getHeader('Set-Cookie'));
     strictEqual(rotatedToken === initialToken, false);
     strictEqual(cookieToken, rotatedToken);
+  });
+
+  it('should not rotate the CSRF token when the login response is not 2xx.', () => {
+    mockConfig({});
+
+    const initialToken = 'initial-token';
+    const hookFn = getHookFunction(CsrfProtection());
+    const postHook = hookFn(
+      makeContext({
+        method: 'POST',
+        path: '/api/auth/login',
+        headers: {
+          cookie: `csrf_token=${initialToken}`,
+          'x-csrf-token': initialToken,
+        },
+      }),
+      new ServiceManager()
+    ) as (response: HttpResponseUnauthorized) => void;
+
+    const response = new HttpResponseUnauthorized();
+    postHook(response);
+
+    const tokenAfter = String(response.getHeader('X-CSRF-Token'));
+    strictEqual(tokenAfter, initialToken);
   });
 
   it('should honor a custom login rotation method from config.', () => {
