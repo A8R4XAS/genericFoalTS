@@ -14,6 +14,14 @@ import { dataSource } from '../db';
 describe('[E2E] User Login & Token Refresh', () => {
   let app: any;
 
+  async function getCsrfContext(): Promise<{ token: string; cookies: string[] }> {
+    const response = await request(app).get('/health').expect(200);
+    return {
+      token: response.headers['x-csrf-token'] as string,
+      cookies: response.headers['set-cookie'] as string[],
+    };
+  }
+
   before(async () => {
     await dataSource.initialize();
     app = await createApp(AppController);
@@ -29,16 +37,24 @@ describe('[E2E] User Login & Token Refresh', () => {
 
   describe('POST /api/auth/login', () => {
     it('should return JWT tokens for valid credentials', async () => {
+      const csrf = await getCsrfContext();
       // Register a user first
-      await request(app).post('/api/auth/register').send({
-        email: 'logintest@example.com',
-        password: 'Password123',
-        firstName: 'Login',
-        lastName: 'Test',
-      });
+      await request(app)
+        .post('/api/auth/register')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
+        .send({
+          email: 'logintest@example.com',
+          password: 'Password123',
+          firstName: 'Login',
+          lastName: 'Test',
+        })
+        .expect(201);
 
       const response = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'logintest@example.com', password: 'Password123' })
         .expect(200);
 
@@ -53,15 +69,23 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject login with wrong password (401 Unauthorized)', async () => {
-      await request(app).post('/api/auth/register').send({
-        email: 'wrongpass@example.com',
-        password: 'Password123',
-        firstName: 'Wrong',
-        lastName: 'Pass',
-      });
+      const csrf = await getCsrfContext();
+      await request(app)
+        .post('/api/auth/register')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
+        .send({
+          email: 'wrongpass@example.com',
+          password: 'Password123',
+          firstName: 'Wrong',
+          lastName: 'Pass',
+        })
+        .expect(201);
 
       const response = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'wrongpass@example.com', password: 'WrongPassword1' })
         .expect(401);
 
@@ -69,8 +93,11 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject login for non-existent user (401 Unauthorized)', async () => {
+      const csrf = await getCsrfContext();
       const response = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'nobody@example.com', password: 'Password123' })
         .expect(401);
 
@@ -78,8 +105,11 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject login with missing fields (400 Bad Request)', async () => {
+      const csrf = await getCsrfContext();
       const response = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'test@example.com' })
         .expect(400);
 
@@ -87,33 +117,57 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject login with invalid email format (400 Bad Request)', async () => {
+      const csrf = await getCsrfContext();
       const response = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'not-an-email', password: 'Password123' })
         .expect(400);
 
       strictEqual(response.body.error, 'Validation failed');
     });
+
+    it('should reject login when CSRF token is missing.', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'nobody@example.com', password: 'Password123' })
+        .expect(403);
+
+      strictEqual(response.body.error, 'Invalid CSRF token');
+    });
   });
 
   describe('POST /api/auth/refresh', () => {
     it('should return a new access token from a valid refresh token', async () => {
-      await request(app).post('/api/auth/register').send({
-        email: 'refreshtest@example.com',
-        password: 'Password123',
-        firstName: 'Refresh',
-        lastName: 'Test',
-      });
+      const csrf = await getCsrfContext();
+      await request(app)
+        .post('/api/auth/register')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
+        .send({
+          email: 'refreshtest@example.com',
+          password: 'Password123',
+          firstName: 'Refresh',
+          lastName: 'Test',
+        })
+        .expect(201);
 
       const loginRes = await request(app)
         .post('/api/auth/login')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ email: 'refreshtest@example.com', password: 'Password123' })
         .expect(200);
 
       const { refreshToken } = loginRes.body;
+      const refreshedCsrfToken = loginRes.headers['x-csrf-token'] as string;
+      const refreshedCsrfCookie = loginRes.headers['set-cookie'] as string[];
 
       const response = await request(app)
         .post('/api/auth/refresh')
+        .set('X-CSRF-Token', refreshedCsrfToken)
+        .set('Cookie', refreshedCsrfCookie)
         .send({ refreshToken })
         .expect(200);
 
@@ -122,8 +176,11 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject an invalid refresh token (401 Unauthorized)', async () => {
+      const csrf = await getCsrfContext();
       const response = await request(app)
         .post('/api/auth/refresh')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
         .send({ refreshToken: 'invalid.token.value' })
         .expect(401);
 
@@ -131,7 +188,13 @@ describe('[E2E] User Login & Token Refresh', () => {
     });
 
     it('should reject a missing refresh token (400 Bad Request)', async () => {
-      const response = await request(app).post('/api/auth/refresh').send({}).expect(400);
+      const csrf = await getCsrfContext();
+      const response = await request(app)
+        .post('/api/auth/refresh')
+        .set('X-CSRF-Token', csrf.token)
+        .set('Cookie', csrf.cookies)
+        .send({})
+        .expect(400);
 
       strictEqual(response.body.error, 'Validation failed');
     });
