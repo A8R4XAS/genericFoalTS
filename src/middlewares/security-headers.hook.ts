@@ -45,6 +45,21 @@ type RequestLike = {
   get?: (headerName: string) => string | undefined;
 };
 
+type HeaderEntry = readonly [string, string];
+
+const HSTS_MAX_AGE_SECONDS = 31536000;
+const EXPECT_CT_MAX_AGE_SECONDS = 86400;
+const DEFAULT_PERMISSIONS_POLICY = [
+  'accelerometer=()',
+  'camera=()',
+  'geolocation=()',
+  'gyroscope=()',
+  'magnetometer=()',
+  'microphone=()',
+  'payment=()',
+  'usb=()',
+].join(', ');
+
 /**
  * SecurityHeaders middleware based on Helmet.js.
  *
@@ -78,6 +93,9 @@ export function SecurityHeaders(): HookDecorator {
     );
 
     const isProduction = process.env.NODE_ENV === 'production';
+    // isHttps is true when the request arrived over a secure channel (TLS or trusted proxy).
+    // We compute it once here so helper functions don't need access to `req`.
+    const isHttps = isHttpsRequest(req);
     if (isProduction && enforceHttpsInProduction && !isHttpsRequest(req)) {
       const url = typeof req.originalUrl === 'string' ? req.originalUrl : req.url;
       // Only redirect when url is an origin-form path (starts with '/' but not '//').
@@ -114,6 +132,16 @@ export function SecurityHeaders(): HookDecorator {
         },
       },
       frameguard: { action: 'deny' },
+      // HSTS must only be sent over HTTPS. Enabling it on HTTP responses can
+      // prevent browsers from ever reaching the site over plain HTTP again.
+      hsts:
+        isProduction && isHttps
+          ? {
+              maxAge: HSTS_MAX_AGE_SECONDS,
+              includeSubDomains: true,
+              preload: true,
+            }
+          : false,
       noSniff: true,
       referrerPolicy: {
         // Stored in config so we can tighten/relax policy without touching code.
@@ -149,13 +177,23 @@ export function SecurityHeaders(): HookDecorator {
 
       if (middlewareError) {
         logger.error(`Helmet middleware failed: ${String(middlewareError)}`);
-        applyFallbackSecurityHeaders(response, cspReportUri, referrerPolicy);
+        // isProduction && isHttps ensures transport-security headers (HSTS, Expect-CT)
+        // are only emitted over HTTPS — never over plain HTTP.
+        applyFallbackSecurityHeaders(
+          response,
+          cspReportUri,
+          referrerPolicy,
+          isProduction && isHttps
+        );
         return;
       }
 
       for (const [name, value] of capturedHeaders.entries()) {
         response.setHeader(name, normalizeHeaderValue(value));
       }
+
+      // isProduction && isHttps ensures Expect-CT is only emitted over HTTPS.
+      applyManualSecurityHeaders(response, isProduction && isHttps);
     };
   });
 }
@@ -214,7 +252,8 @@ function normalizeHeaderValue(value: number | string | string[]): string {
 function applyFallbackSecurityHeaders(
   response: HttpResponse,
   cspReportUri: string,
-  referrerPolicy: ReferrerPolicyValue
+  referrerPolicy: ReferrerPolicyValue,
+  isProduction: boolean
 ): void {
   response.setHeader('X-Frame-Options', 'DENY');
   response.setHeader('X-Content-Type-Options', 'nosniff');
@@ -223,6 +262,15 @@ function applyFallbackSecurityHeaders(
     'Content-Security-Policy',
     `default-src 'self'; frame-ancestors 'none'; object-src 'none'; report-uri ${cspReportUri}`
   );
+
+  if (isProduction) {
+    response.setHeader(
+      'Strict-Transport-Security',
+      `max-age=${HSTS_MAX_AGE_SECONDS}; includeSubDomains; preload`
+    );
+  }
+
+  applyManualSecurityHeaders(response, isProduction);
 }
 
 const VALID_REFERRER_POLICIES: ReferrerPolicyValue[] = [
@@ -251,4 +299,41 @@ function sanitizeCspReportUri(value: string): string {
     return value;
   }
   return '/csp-violation-report';
+}
+
+function applyManualSecurityHeaders(response: HttpResponse, isProduction: boolean): void {
+  for (const [name, value] of getManualSecurityHeaders(isProduction)) {
+    response.setHeader(name, value);
+  }
+}
+
+function getManualSecurityHeaders(isProduction: boolean): HeaderEntry[] {
+  const headers: HeaderEntry[] = [
+    ['Permissions-Policy', DEFAULT_PERMISSIONS_POLICY],
+    [
+      // Legacy browser XSS filters were buggy and could introduce surprising behavior.
+      // Setting the header to "0" keeps the header explicit for scanners while making it
+      // clear that Content-Security-Policy is our real XSS mitigation in modern browsers.
+      'X-XSS-Protection',
+      '0',
+    ],
+    [
+      // Older IE/Edge variants honor this response header for downloaded HTML files and
+      // avoid opening them in the site's own security context.
+      'X-Download-Options',
+      'noopen',
+    ],
+  ];
+
+  if (isProduction) {
+    headers.push([
+      // Expect-CT is largely historical today because public CAs already participate in
+      // Certificate Transparency by default. We still emit it in production because the
+      // issue explicitly asks for it and some scanners continue to reward its presence.
+      'Expect-CT',
+      `max-age=${EXPECT_CT_MAX_AGE_SECONDS}, enforce`,
+    ]);
+  }
+
+  return headers;
 }
