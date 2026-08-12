@@ -2,7 +2,14 @@
 import { ok, strictEqual } from 'assert';
 
 // 3p
-import { Config, Context, getHookFunction, HttpResponseOK, HttpResponseUnauthorized, ServiceManager } from '@foal/core';
+import {
+  Config,
+  Context,
+  getHookFunction,
+  HttpResponseOK,
+  HttpResponseUnauthorized,
+  ServiceManager,
+} from '@foal/core';
 
 // App
 import { CsrfProtection } from './csrf.hook';

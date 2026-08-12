@@ -129,7 +129,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
       ok(Array.isArray(body.details), 'Should include validation details');
     });
@@ -150,7 +150,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
 
@@ -170,7 +170,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
 
@@ -190,7 +190,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
 
@@ -208,7 +208,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
@@ -409,7 +409,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
@@ -496,7 +496,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
@@ -561,7 +561,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
@@ -649,7 +649,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
@@ -703,7 +703,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Invalid or expired password reset token');
     });
 
@@ -729,7 +729,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Invalid or expired password reset token');
 
       // Password should remain unchanged
@@ -759,7 +759,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
 
@@ -775,7 +775,7 @@ describe('AuthController', () => {
         throw new Error('The response should be an instance of HttpResponseBadRequest.');
       }
 
-      const body = response.body as any;
+      const body = response.body;
       strictEqual(body.error, 'Validation failed');
     });
   });
