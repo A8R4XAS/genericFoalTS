@@ -12,6 +12,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
   - [🚀 Installation](#-installation)
   - [⚙️ Konfiguration](#️-konfiguration)
     - [Rate Limiting](#rate-limiting)
+    - [Security Headers](#security-headers)
   - [💻 Entwicklung](#-entwicklung)
     - [Development-Server starten](#development-server-starten)
     - [Hot Reload](#hot-reload)
@@ -66,19 +67,22 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
 ## 🚀 Installation
 
 1. **Repository klonen**
+
    ```bash
    git clone <repository-url>
    cd genericFoalTS
    ```
 
 2. **Dependencies installieren**
+
    ```bash
    npm install
    ```
 
 3. **Umgebungsvariablen konfigurieren**
-   
+
    Erstelle eine `.env` Datei im Projektverzeichnis:
+
    ```env
    NODE_ENV=development
    DATABASE_TYPE=postgres
@@ -90,6 +94,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
    ```
 
 4. **Datenbank erstellen**
+
    ```bash
    # PostgreSQL-Datenbank erstellen
    createdb genericfoalts
@@ -121,10 +126,10 @@ pro Zeitfenster stellen darf. Wird das Limit überschritten, antwortet der Serve
 
 Es gibt zwei vordefinierte Profile:
 
-| Profil | Verwendung | Standard |
-|--------|-----------|---------|
+| Profil    | Verwendung                              | Standard            |
+| --------- | --------------------------------------- | ------------------- |
 | `default` | Normale API-Endpunkte (`ApiController`) | 120 Anfragen / 60 s |
-| `auth` | Auth-Endpunkte (`AuthController`) | 60 Anfragen / 60 s |
+| `auth`    | Auth-Endpunkte (`AuthController`)       | 60 Anfragen / 60 s  |
 
 Einzelne Endpunkte können über `rateLimit.endpoints` in `config/default.json` mit
 eigenen, schärferen Limits versehen werden – z. B. `AuthController.login: 15/60s`.
@@ -138,6 +143,54 @@ Zählerstand.
 
 Eine ausführliche Erklärung – inklusive Begriffserklärungen, Konfigurationsbeispiele und
 häufige Fragen – findest du in [RATE_LIMITING.md](RATE_LIMITING.md).
+
+### Security Headers
+
+Die Anwendung aktiviert zentral im `SecurityHeaders`-Hook (`src/middlewares/security-headers.hook.ts`)
+eine Reihe von HTTP-Response-Headern. Diese Header sind kleine Zusatzinformationen in jeder
+Server-Antwort. Browser lesen sie aus und verhalten sich dadurch sicherer.
+
+Die wichtigsten konfigurierten Header sind:
+
+| Header                             | Zweck                                                                                                               | Verhalten in diesem Projekt                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `Strict-Transport-Security` (HSTS) | Sagt dem Browser: „Sprich mit dieser Domain künftig nur noch über HTTPS.“                                           | **Nur in Production** aktiv, mit `max-age=31536000; includeSubDomains; preload`                            |
+| `Content-Security-Policy` (CSP)    | Erlaubt nur definierte Quellen für Skripte, Styles, Bilder usw. und reduziert damit XSS-Risiken                     | Aktiv, inklusive `report-uri /csp-violation-report`                                                        |
+| `X-Frame-Options: DENY`            | Verhindert Clickjacking, also das Einbetten der Seite in fremde `iframe`s                                           | Aktiv                                                                                                      |
+| `X-Content-Type-Options: nosniff`  | Verhindert, dass Browser Dateitypen „erraten“ und dadurch gefährliche Inhalte falsch ausführen                      | Aktiv                                                                                                      |
+| `Referrer-Policy: no-referrer`     | Verhindert, dass Zielseiten unnötig erfahren, von welcher URL ein Benutzer kam                                      | Aktiv                                                                                                      |
+| `Permissions-Policy`               | Deaktiviert Browser-Funktionen wie Kamera, Mikrofon oder Geolocation, sofern die Anwendung sie nicht braucht        | Aktiv                                                                                                      |
+| `X-Download-Options: noopen`       | Schutz für ältere IE/Legacy-Browser, damit heruntergeladene HTML-Dateien nicht im Kontext der Seite geöffnet werden | Aktiv                                                                                                      |
+| `X-XSS-Protection: 0`              | Alter Legacy-Header für veraltete Browser-XSS-Filter                                                                | Aktiv, aber bewusst auf `0`, weil moderne Browser auf CSP setzen und alte Filter problematisch sein können |
+| `Expect-CT`                        | Historischer Header rund um Certificate Transparency                                                                | **Nur in Production** aktiv, damit Security-Scanner den Header sehen                                       |
+
+#### Warum sind manche Header nur in Production aktiv?
+
+- **HSTS** ist in lokalen Entwicklungsumgebungen oft hinderlich, weil ein Browser sich merken
+  würde, dass eine Domain nur noch über HTTPS erreichbar sein soll.
+- **Expect-CT** ist heute eher ein Kompatibilitäts-/Scanner-Header als ein alltägliches
+  Schutzinstrument. Deshalb wird er nur dort gesendet, wo er relevant ist: in Production.
+
+#### HTTPS-Weiterleitung in Production
+
+Zusätzlich zu den Response-Headern erzwingt der Hook in Production HTTPS. Wenn eine Anfrage
+noch per HTTP eingeht, antwortet die Anwendung mit einem `308 Permanent Redirect` auf die
+HTTPS-Variante der URL. So werden auch Formulare oder `POST`-Requests korrekt auf HTTPS
+umgeleitet, ohne die HTTP-Methode zu verlieren.
+
+#### Relevante Konfigurationswerte
+
+Die Basis-Konfiguration liegt in `config/default.json`:
+
+- `security.helmet.enabled` – aktiviert/deaktiviert den Security-Header-Hook
+- `security.helmet.enforceHttpsInProduction` – erzwingt HTTPS-Redirects in Production
+- `security.helmet.trustProxy` – wertet `X-Forwarded-Proto` aus, wenn die App hinter einem Proxy läuft
+- `security.helmet.referrerPolicy` – steuert den `Referrer-Policy`-Header
+- `security.helmet.csp.reportUri` – Zielpfad für CSP-Verletzungsberichte
+
+> **Hinweis:** Für eine gute Bewertung in Tools wie **SecurityHeaders.com** muss die Anwendung
+> in Production tatsächlich per HTTPS ausgeliefert werden. HSTS und HTTPS-Redirects helfen nur,
+> wenn vor der App auch ein TLS-fähiger Proxy / Load-Balancer korrekt konfiguriert ist.
 
 ## 💻 Entwicklung
 
@@ -185,6 +238,7 @@ npm run format:check
 ### Pre-commit Hooks
 
 Husky führt automatisch vor jedem Commit folgende Aktionen aus:
+
 - ESLint prüft und behebt Fehler in geänderten TypeScript-Dateien
 - Prettier formatiert geänderte Dateien
 
@@ -193,6 +247,7 @@ Commits mit Linting-Fehlern werden automatisch verhindert.
 ### VS Code Integration
 
 Das Projekt enthält empfohlene VS Code-Einstellungen (`.vscode/settings.json`):
+
 - Automatisches Formatieren beim Speichern
 - ESLint-Integration mit automatischer Fehlerkorrektur
 - Empfohlene Extensions (ESLint, Prettier)
@@ -307,25 +362,25 @@ genericFoalTS/
 
 ## 📝 Verfügbare Scripts
 
-| Script | Beschreibung |
-|--------|--------------|
-| `npm run build` | Projekt für Production kompilieren |
-| `npm start` | Production-Server starten |
-| `npm run dev` | Development-Server mit Hot-Reload |
-| `npm run backendDev` | DB starten + Development-Server |
-| `npm run test` | Unit-Tests im Watch-Mode |
-| `npm run e2e` | E2E-Tests im Watch-Mode |
-| `npm run lint` | Code mit ESLint prüfen |
-| `npm run lint:fix` | Code-Probleme automatisch beheben |
-| `npm run format` | Code mit Prettier formatieren |
-| `npm run format:check` | Formatierung prüfen |
-| `npm run makemigrations` | Neue Datenbank-Migration erstellen |
-| `npm run migrations` | Migrationen ausführen |
-| `npm run revertmigration` | Letzte Migration zurückrollen |
-| `npm run db:start` | PostgreSQL starten |
-| `npm run db:stop` | PostgreSQL stoppen |
-| `npm run db:restart` | PostgreSQL neu starten |
-| `npm run db:status` | PostgreSQL-Status anzeigen |
+| Script                    | Beschreibung                       |
+| ------------------------- | ---------------------------------- |
+| `npm run build`           | Projekt für Production kompilieren |
+| `npm start`               | Production-Server starten          |
+| `npm run dev`             | Development-Server mit Hot-Reload  |
+| `npm run backendDev`      | DB starten + Development-Server    |
+| `npm run test`            | Unit-Tests im Watch-Mode           |
+| `npm run e2e`             | E2E-Tests im Watch-Mode            |
+| `npm run lint`            | Code mit ESLint prüfen             |
+| `npm run lint:fix`        | Code-Probleme automatisch beheben  |
+| `npm run format`          | Code mit Prettier formatieren      |
+| `npm run format:check`    | Formatierung prüfen                |
+| `npm run makemigrations`  | Neue Datenbank-Migration erstellen |
+| `npm run migrations`      | Migrationen ausführen              |
+| `npm run revertmigration` | Letzte Migration zurückrollen      |
+| `npm run db:start`        | PostgreSQL starten                 |
+| `npm run db:stop`         | PostgreSQL stoppen                 |
+| `npm run db:restart`      | PostgreSQL neu starten             |
+| `npm run db:status`       | PostgreSQL-Status anzeigen         |
 
 ## 📄 Lizenz
 

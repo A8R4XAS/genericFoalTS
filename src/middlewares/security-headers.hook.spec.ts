@@ -79,6 +79,14 @@ describe('SecurityHeaders hook', () => {
     strictEqual(response.getHeader('X-Frame-Options'), 'DENY');
     strictEqual(response.getHeader('X-Content-Type-Options'), 'nosniff');
     strictEqual(response.getHeader('Referrer-Policy'), 'no-referrer');
+    strictEqual(response.getHeader('X-XSS-Protection'), '0');
+    strictEqual(response.getHeader('X-Download-Options'), 'noopen');
+    strictEqual(
+      response.getHeader('Permissions-Policy'),
+      'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+    );
+    strictEqual(response.getHeader('Strict-Transport-Security'), undefined);
+    strictEqual(response.getHeader('Expect-CT'), undefined);
     ok(
       String(response.getHeader('Content-Security-Policy')).includes(
         'report-uri /csp-violation-report'
@@ -87,6 +95,28 @@ describe('SecurityHeaders hook', () => {
     // img-src is configured only in the Helmet path, not in applyFallbackSecurityHeaders.
     // This assertion verifies Helmet integration ran successfully.
     ok(String(response.getHeader('Content-Security-Policy')).includes('img-src'));
+  });
+
+  it('should add HSTS and Expect-CT in production for HTTPS requests.', () => {
+    process.env.NODE_ENV = 'production';
+    mockConfig({});
+
+    const hookFn = getHookFunction(SecurityHeaders());
+    const postHook = hookFn(
+      makeContext({
+        secure: true,
+      }),
+      makeServices()
+    ) as (response: HttpResponseOK) => void;
+    const response = new HttpResponseOK();
+    postHook(response);
+
+    strictEqual(
+      response.getHeader('Strict-Transport-Security'),
+      'max-age=31536000; includeSubDomains; preload'
+    );
+    strictEqual(response.getHeader('Expect-CT'), 'max-age=86400, enforce');
+    ok(String(response.getHeader('Content-Security-Policy')).includes('upgrade-insecure-requests'));
   });
 
   it('should enforce HTTPS in production via 308 redirect.', () => {
