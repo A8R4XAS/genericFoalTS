@@ -103,6 +103,10 @@ export class AuthController {
   async verifyEmail(ctx: Context) {
     const { token } = ctx.request.params as { token: string };
 
+    if (!/^[a-f0-9]{64}$/.test(token)) {
+      return new HttpResponseBadRequest({ error: 'Invalid or expired verification token' });
+    }
+
     const user = await User.findOne({ where: { verificationToken: token } });
 
     if (!user) {
