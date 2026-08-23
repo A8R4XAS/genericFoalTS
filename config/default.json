@@ -79,5 +79,10 @@
         "reportUri": "/csp-violation-report"
       }
     }
+  },
+  "fileUpload": {
+    "storagePath": "./storage/uploads",
+    "maxSizeBytes": 5242880,
+    "allowedMimeTypes": ["image/jpeg", "image/png", "application/pdf"]
   }
 }

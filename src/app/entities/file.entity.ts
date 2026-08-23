@@ -1,21 +1,16 @@
-TO:DO
-New FileUpload TypeORM entity storing originalName, storedName, mimeType, size, storagePath, uploadedBy (FK to User), and createdAt
-
 import {
   BaseEntity,
-  BeforeInsert,
-  BeforeUpdate,
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  ManyToOne,
 } from 'typeorm';
-
+import { User } from './user.entity';
 
 @Entity()
-export class User extends BaseEntity {
+export class FileUpload extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -28,23 +23,18 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 100 })
   mimeType: string;
 
-@Column()
-size: int;
+  @Column()
+  size: number;
 
-@Column({ type: 'varchar', length: 255 })
-storagePath: string;
+  @Column({ type: 'varchar', length: 255 })
+  storagePath: string;
 
-@Column()
-uploadedBy: User;
+  @ManyToOne(() => User, user => user.files, { nullable: false, onDelete: 'CASCADE' })
+  uploadedBy: User;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
- 
-
-  }
 }
-
