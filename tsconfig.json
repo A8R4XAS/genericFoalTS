@@ -10,12 +10,8 @@
     "module": "commonjs",
     "target": "es2023",
     "rootDir": "src",
-    "lib": [
-      "es2023",
-      "dom"
-    ]
+    "lib": ["es2023", "dom"],
+    "types": ["mocha", "node"]
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }
