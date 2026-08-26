@@ -8,8 +8,10 @@ import {
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { PasswordHashingService } from '../services';
+import { FileUpload } from './file.entity';
 
 const passwordHashingService = new PasswordHashingService();
 
@@ -74,4 +76,7 @@ export class User extends BaseEntity {
 
     this.password = await passwordHashingService.hash(this.password);
   }
+
+  @OneToMany(() => FileUpload, file => file.uploadedBy)
+  files: FileUpload[];
 }

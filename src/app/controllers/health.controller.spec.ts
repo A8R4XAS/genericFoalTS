@@ -24,9 +24,10 @@ const db = require('../../db');
 function stubDataSource(isInitialized: boolean, queryError?: Error) {
   db.dataSource = {
     isInitialized,
+    options: { type: 'postgres', database: 'genericfoalts_test' },
     query: queryError
       ? () => Promise.reject(queryError)
-      : () => Promise.resolve([{ '?column?': 1 }]),
+      : () => Promise.resolve([{ version: 'PostgreSQL 16.1' }]),
   };
 }
 
@@ -134,7 +135,10 @@ describe('HealthController', () => {
       const response = await controller.db();
 
       ok(isHttpResponseOK(response));
-      deepStrictEqual(response.body, { status: 'ok', db: 'connected' });
+      strictEqual(response.body.status, 'ok');
+      strictEqual(response.body.db, 'connected');
+      strictEqual(response.body.details.type, 'postgres');
+      strictEqual(response.body.details.database, 'genericfoalts_test');
     });
 
     it('should return 503 when the DataSource is not initialized.', async () => {

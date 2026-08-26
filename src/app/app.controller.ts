@@ -17,6 +17,7 @@ import {
   Logger,
   Post,
 } from '@foal/core';
+import { FileController } from './controllers/file.controller';
 
 import { Cors, CsrfProtection, RequestLogger, SecurityHeaders } from '../middlewares';
 import { AdminController, ApiController, AuthController, HealthController } from './controllers';
@@ -50,6 +51,7 @@ export class AppController implements IAppController {
     controller('/api', ApiController),
     controller('/api/auth', AuthController),
     controller('/api/admin', AdminController),
+    controller('/api/files', FileController),
     controller('/health', HealthController),
   ];
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -284,8 +284,8 @@
     <div class="dev-warning" id="dev-warning">
       <strong>⚠️ Development use only.</strong> This page is a test harness — it must
       <strong>not</strong> be accessible in a production environment. Ensure
-      <code>public/test.html</code> is removed or blocked (e.g., via a server-side route guard
-      or by excluding it from production artifacts) before deploying.
+      <code>public/test.html</code> is removed or blocked (e.g., via a server-side route guard or by
+      excluding it from production artifacts) before deploying.
     </div>
 
     <h1>FoalTS – Test Environment</h1>
@@ -307,7 +307,12 @@
         </div>
         <div>
           <label>Email</label>
-          <input id="reg-email" type="email" placeholder="alice@example.com" value="alice@example.com" />
+          <input
+            id="reg-email"
+            type="email"
+            placeholder="alice@example.com"
+            value="alice@example.com"
+          />
         </div>
         <div>
           <label>Password</label>
@@ -337,11 +342,21 @@
         <h2>Login <span class="endpoint-tag">POST /api/auth/login</span></h2>
         <div>
           <label>Email</label>
-          <input id="login-email" type="email" placeholder="alice@example.com" value="alice@example.com" />
+          <input
+            id="login-email"
+            type="email"
+            placeholder="alice@example.com"
+            value="alice@example.com"
+          />
         </div>
         <div>
           <label>Password</label>
-          <input id="login-password" type="password" placeholder="Password123" value="Password123" />
+          <input
+            id="login-password"
+            type="password"
+            placeholder="Password123"
+            value="Password123"
+          />
         </div>
         <button class="btn btn-primary" onclick="doLogin()">Login → store tokens</button>
         <div class="response" id="login-response">— response appears here —</div>
@@ -370,7 +385,10 @@
           <button class="btn btn-success" onclick="doProtected('/api/', 'protected-response')">
             GET /api/
           </button>
-          <button class="btn btn-success" onclick="doProtected('/api/profile', 'protected-response')">
+          <button
+            class="btn btn-success"
+            onclick="doProtected('/api/profile', 'protected-response')"
+          >
             GET /api/profile
           </button>
           <button class="btn btn-danger" onclick="doProtected('/api/admin', 'protected-response')">
@@ -378,7 +396,10 @@
           </button>
         </div>
         <div class="btn-row">
-          <button class="btn btn-ghost" onclick="doProtectedNoToken('/api/profile', 'protected-response')">
+          <button
+            class="btn btn-ghost"
+            onclick="doProtectedNoToken('/api/profile', 'protected-response')"
+          >
             GET /api/profile (no token → 401)
           </button>
         </div>
@@ -416,7 +437,12 @@
         </div>
         <div>
           <label>New password</label>
-          <input id="reset-password" type="password" placeholder="NewPassword123" value="NewPassword123" />
+          <input
+            id="reset-password"
+            type="password"
+            placeholder="NewPassword123"
+            value="NewPassword123"
+          />
         </div>
         <button class="btn btn-danger" onclick="doResetPassword()">Reset Password</button>
         <div class="response" id="reset-response">— response appears here —</div>
@@ -437,8 +463,48 @@
             value="alice@example.com"
           />
         </div>
-        <button class="btn btn-warning" onclick="doResendVerification()">Resend Email</button>
-        <div class="response" id="resend-response">— response appears here —</div>
+      </div>
+
+      <!-- ── FILE UPLOAD ── -->
+      <div class="card">
+        <h2>File Upload <span class="endpoint-tag">POST /api/files/upload</span></h2>
+        <p class="hint">
+          Requires a valid Bearer token. Allowed formats: PNG, JPEG, PDF (max 5 MB).
+        </p>
+        <div>
+          <label>Select file</label>
+          <input id="upload-file-input" type="file" accept="image/png,image/jpeg,application/pdf" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="doUploadFile()">Upload File</button>
+          <button class="btn btn-success" onclick="doGetMyFiles()">GET /api/files/my-files</button>
+        </div>
+        <div class="response" id="upload-response">— upload response appears here —</div>
+        <div>
+          <label style="margin-top: 8px">Uploaded Files List</label>
+          <div class="response" id="my-files-response">
+            — your uploaded files list appears here —
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HEALTH CHECKS ── -->
+      <div class="card">
+        <h2>Health Checks <span class="endpoint-tag">GET /health/*</span></h2>
+        <p class="hint">Check server status, liveness, readiness, and database connectivity.</p>
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="doHealthCheck('/health')">GET /health</button>
+          <button class="btn btn-success" onclick="doHealthCheck('/health/live')">
+            GET /health/live
+          </button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/ready')">
+            GET /health/ready
+          </button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/db')">
+            GET /health/db
+          </button>
+        </div>
+        <div class="response" id="health-response">— response appears here —</div>
       </div>
 
       <!-- ── REQUEST LOG ── -->
@@ -467,6 +533,7 @@
       /* ── State ── */
       let accessToken = null;
       let refreshTokenValue = null;
+      let csrfToken = null;
       const logEntries = [];
 
       /* ── Utility ── */
@@ -485,7 +552,8 @@
           .split('/')
           .map(segment => {
             if (/^[0-9a-f]{32,}$/i.test(segment)) return '[REDACTED]';
-            if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(segment)) return '[REDACTED]';
+            if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(segment))
+              return '[REDACTED]';
             return segment;
           })
           .join('/');
@@ -496,7 +564,13 @@
         const ts = new Date().toLocaleTimeString();
         const safeUrl = sanitizeLogUrl(url);
         const cls =
-          status >= 500 ? 'log-5xx' : status >= 400 ? 'log-4xx' : status >= 200 ? 'log-2xx' : 'log-ts';
+          status >= 500
+            ? 'log-5xx'
+            : status >= 400
+              ? 'log-4xx'
+              : status >= 200
+                ? 'log-2xx'
+                : 'log-ts';
         logEntries.unshift({ ts, method, safeUrl, status, durationMs, cls });
 
         const out = document.getElementById('log-output');
@@ -534,15 +608,23 @@
 
       async function apiFetch(method, url, body, headers) {
         const t0 = Date.now();
+        const isUnsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase());
         const opts = {
           method,
-          headers: { 'Content-Type': 'application/json', ...(headers || {}) },
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(isUnsafeMethod && csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+            ...(headers || {}),
+          },
         };
         if (body !== undefined) opts.body = JSON.stringify(body);
 
         let res, json;
         try {
           res = await fetch(url, opts);
+          const newCsrfToken = res.headers.get('x-csrf-token');
+          if (newCsrfToken) csrfToken = newCsrfToken;
           const raw = await res.text();
           try {
             json = JSON.parse(raw);
@@ -557,6 +639,9 @@
         addLog(method, url, res.status, Date.now() - t0);
         return { status: res.status, body: json, ok: res.ok };
       }
+
+      /* Fetch an initial CSRF token/cookie via a safe GET request before any login/register call. */
+      apiFetch('GET', '/health').catch(() => {});
 
       /* ── Auth helpers ── */
       function bearerHeaders() {
@@ -671,11 +756,9 @@
           return;
         }
         try {
-          const r = await apiFetch(
-            'POST',
-            `/api/auth/reset-password/${token}`,
-            { password: document.getElementById('reset-password').value }
-          );
+          const r = await apiFetch('POST', `/api/auth/reset-password/${token}`, {
+            password: document.getElementById('reset-password').value,
+          });
           showResponse('reset-response', r.body, !r.ok);
         } catch (e) {
           showResponse('reset-response', String(e), true);
@@ -690,6 +773,78 @@
           showResponse('resend-response', r.body, !r.ok);
         } catch (e) {
           showResponse('resend-response', String(e), true);
+        }
+      }
+
+      async function doHealthCheck(url) {
+        try {
+          const r = await apiFetch('GET', url);
+          showResponse('health-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('health-response', String(e), true);
+        }
+      }
+
+      async function doUploadFile() {
+        const fileInput = document.getElementById('upload-file-input');
+        if (!fileInput.files || fileInput.files.length === 0) {
+          showResponse('upload-response', 'Please select a file to upload.', true);
+          return;
+        }
+
+        if (!accessToken) {
+          showResponse('upload-response', 'No access token stored. Login first.', true);
+          return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const t0 = Date.now();
+        try {
+          const res = await fetch('/api/files/upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+            },
+            body: formData,
+          });
+
+          const newCsrfToken = res.headers.get('x-csrf-token');
+          if (newCsrfToken) csrfToken = newCsrfToken;
+
+          const raw = await res.text();
+          let json;
+          try {
+            json = JSON.parse(raw);
+          } catch {
+            json = raw;
+          }
+
+          addLog('POST', '/api/files/upload', res.status, Date.now() - t0);
+          showResponse('upload-response', json, !res.ok);
+          if (res.ok) {
+            doGetMyFiles();
+          }
+        } catch (e) {
+          addLog('POST', '/api/files/upload', 0, Date.now() - t0);
+          showResponse('upload-response', String(e), true);
+        }
+      }
+
+      async function doGetMyFiles() {
+        if (!accessToken) {
+          showResponse('my-files-response', 'No access token stored. Login first.', true);
+          return;
+        }
+        try {
+          const r = await apiFetch('GET', '/api/files/my-files', undefined, bearerHeaders());
+          showResponse('my-files-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('my-files-response', String(e), true);
         }
       }
     </script>
