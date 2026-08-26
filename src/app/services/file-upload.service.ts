@@ -120,4 +120,11 @@ export class FileUploadService {
 
     return undefined;
   }
+
+  async getUserFiles(user: User): Promise<FileUpload[]> {
+    return FileUpload.find({
+      where: { uploadedBy: { id: user.id } },
+      order: { createdAt: 'DESC' },
+    });
+  }
 }

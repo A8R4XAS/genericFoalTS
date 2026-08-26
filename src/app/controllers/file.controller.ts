@@ -5,13 +5,38 @@ Returns 201 with file metadata on success; 400 on type/size violation
 
 - HTTP und Multipart-Datei aus ctx.request.files lesen
  */
-import { Context, Post, HttpResponseBadRequest, HttpResponseCreated } from '@foal/core';
+import {
+  Context,
+  Get,
+  Post,
+  HttpResponseBadRequest,
+  HttpResponseCreated,
+  HttpResponseOK,
+} from '@foal/core';
 import { ParseAndValidateFiles } from '@foal/storage';
 import { JwtRequired, RateLimit } from '../hooks';
 import { FileUploadService } from '../services';
 import { User } from '../entities';
 export class FileController {
   private readonly fileUploadService: FileUploadService = new FileUploadService();
+
+  @JwtRequired()
+  @RateLimit()
+  @Get('/my-files')
+  async getMyFiles(ctx: Context<User>) {
+    const files = await this.fileUploadService.getUserFiles(ctx.user);
+
+    return new HttpResponseOK(
+      files.map(file => ({
+        id: file.id,
+        originalName: file.originalName,
+        storedName: file.storedName,
+        mimeType: file.mimeType,
+        size: file.size,
+        uploadDate: file.createdAt,
+      }))
+    );
+  }
 
   @JwtRequired()
   @RateLimit()

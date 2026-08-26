@@ -475,8 +475,17 @@
           <label>Select file</label>
           <input id="upload-file-input" type="file" accept="image/png,image/jpeg,application/pdf" />
         </div>
-        <button class="btn btn-primary" onclick="doUploadFile()">Upload File</button>
-        <div class="response" id="upload-response">— response appears here —</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="doUploadFile()">Upload File</button>
+          <button class="btn btn-success" onclick="doGetMyFiles()">GET /api/files/my-files</button>
+        </div>
+        <div class="response" id="upload-response">— upload response appears here —</div>
+        <div>
+          <label style="margin-top: 8px">Uploaded Files List</label>
+          <div class="response" id="my-files-response">
+            — your uploaded files list appears here —
+          </div>
+        </div>
       </div>
 
       <!-- ── HEALTH CHECKS ── -->
@@ -817,9 +826,25 @@
 
           addLog('POST', '/api/files/upload', res.status, Date.now() - t0);
           showResponse('upload-response', json, !res.ok);
+          if (res.ok) {
+            doGetMyFiles();
+          }
         } catch (e) {
           addLog('POST', '/api/files/upload', 0, Date.now() - t0);
           showResponse('upload-response', String(e), true);
+        }
+      }
+
+      async function doGetMyFiles() {
+        if (!accessToken) {
+          showResponse('my-files-response', 'No access token stored. Login first.', true);
+          return;
+        }
+        try {
+          const r = await apiFetch('GET', '/api/files/my-files', undefined, bearerHeaders());
+          showResponse('my-files-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('my-files-response', String(e), true);
         }
       }
     </script>
