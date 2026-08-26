@@ -5,3 +5,4 @@ export { JwtRequired } from './jwt-required.hook';
 export { RoleRequired } from './role-required.hook';
 export { Permission, PermissionRequired } from './permission-required.hook';
 export { RateLimit } from './rate-limit.hook';
+export { ParseMultipartFormData } from './parse-multipart-form-data.hook';

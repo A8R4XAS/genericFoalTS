@@ -73,9 +73,6 @@ export class FileUploadService {
       'application/pdf': 'pdf',
     };
 
-    //TO_DO:
-    //path.basename validation to prevent path traversal attacks
-
     const originalName = path.basename(file.filename ?? 'unnamed-file');
     const storedName = `${randomUUID()}.${extensionByMimeType[file.mimeType]}`;
     const finalPath = path.resolve(storagePath, storedName);
