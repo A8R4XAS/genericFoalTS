@@ -385,7 +385,10 @@
           <button class="btn btn-success" onclick="doProtected('/api/', 'protected-response')">
             GET /api/
           </button>
-          <button class="btn btn-success" onclick="doProtected('/api/profile', 'protected-response')"> 
+          <button
+            class="btn btn-success"
+            onclick="doProtected('/api/profile', 'protected-response')"
+          >
             GET /api/profile
           </button>
           <button class="btn btn-danger" onclick="doProtected('/api/admin', 'protected-response')">
@@ -460,17 +463,37 @@
             value="alice@example.com"
           />
         </div>
-        <button class="btn btn-warning" onclick="doResendVerification()">Resend Email</button>
-        <div class="response" id="resend-response">— response appears here —</div>
+      </div>
+
+      <!-- ── FILE UPLOAD ── -->
+      <div class="card">
+        <h2>File Upload <span class="endpoint-tag">POST /api/files/upload</span></h2>
+        <p class="hint">
+          Requires a valid Bearer token. Allowed formats: PNG, JPEG, PDF (max 5 MB).
+        </p>
+        <div>
+          <label>Select file</label>
+          <input id="upload-file-input" type="file" accept="image/png,image/jpeg,application/pdf" />
+        </div>
+        <button class="btn btn-primary" onclick="doUploadFile()">Upload File</button>
+        <div class="response" id="upload-response">— response appears here —</div>
+      </div>
+
       <!-- ── HEALTH CHECKS ── -->
       <div class="card">
         <h2>Health Checks <span class="endpoint-tag">GET /health/*</span></h2>
         <p class="hint">Check server status, liveness, readiness, and database connectivity.</p>
         <div class="btn-row">
           <button class="btn btn-success" onclick="doHealthCheck('/health')">GET /health</button>
-          <button class="btn btn-success" onclick="doHealthCheck('/health/live')">GET /health/live</button>
-          <button class="btn btn-warning" onclick="doHealthCheck('/health/ready')">GET /health/ready</button>
-          <button class="btn btn-warning" onclick="doHealthCheck('/health/db')">GET /health/db</button>
+          <button class="btn btn-success" onclick="doHealthCheck('/health/live')">
+            GET /health/live
+          </button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/ready')">
+            GET /health/ready
+          </button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/db')">
+            GET /health/db
+          </button>
         </div>
         <div class="response" id="health-response">— response appears here —</div>
       </div>
@@ -750,6 +773,53 @@
           showResponse('health-response', r.body, !r.ok);
         } catch (e) {
           showResponse('health-response', String(e), true);
+        }
+      }
+
+      async function doUploadFile() {
+        const fileInput = document.getElementById('upload-file-input');
+        if (!fileInput.files || fileInput.files.length === 0) {
+          showResponse('upload-response', 'Please select a file to upload.', true);
+          return;
+        }
+
+        if (!accessToken) {
+          showResponse('upload-response', 'No access token stored. Login first.', true);
+          return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const t0 = Date.now();
+        try {
+          const res = await fetch('/api/files/upload', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+            },
+            body: formData,
+          });
+
+          const newCsrfToken = res.headers.get('x-csrf-token');
+          if (newCsrfToken) csrfToken = newCsrfToken;
+
+          const raw = await res.text();
+          let json;
+          try {
+            json = JSON.parse(raw);
+          } catch {
+            json = raw;
+          }
+
+          addLog('POST', '/api/files/upload', res.status, Date.now() - t0);
+          showResponse('upload-response', json, !res.ok);
+        } catch (e) {
+          addLog('POST', '/api/files/upload', 0, Date.now() - t0);
+          showResponse('upload-response', String(e), true);
         }
       }
     </script>
