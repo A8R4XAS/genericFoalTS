@@ -6,7 +6,8 @@ Returns 201 with file metadata on success; 400 on type/size violation
 - HTTP und Multipart-Datei aus ctx.request.files lesen
  */
 import { Context, Post, HttpResponseBadRequest, HttpResponseCreated } from '@foal/core';
-import { JwtRequired, ParseMultipartFormData, RateLimit } from '../hooks';
+import { ParseAndValidateFiles } from '@foal/storage';
+import { JwtRequired, RateLimit } from '../hooks';
 import { FileUploadService } from '../services';
 import { User } from '../entities';
 export class FileController {
@@ -14,7 +15,9 @@ export class FileController {
 
   @JwtRequired()
   @RateLimit()
-  @ParseMultipartFormData()
+  @ParseAndValidateFiles({
+    file: { required: true },
+  })
   @Post('/upload')
   async uploadFile(ctx: Context<User>) {
     const file = ctx.files.get('file')?.[0]; // Assuming a single file upload with the field name 'file'
