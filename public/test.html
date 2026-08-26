@@ -385,10 +385,7 @@
           <button class="btn btn-success" onclick="doProtected('/api/', 'protected-response')">
             GET /api/
           </button>
-          <button
-            class="btn btn-success"
-            onclick="doProtected('/api/profile', 'protected-response')"
-          >
+          <button class="btn btn-success" onclick="doProtected('/api/profile', 'protected-response')"> 
             GET /api/profile
           </button>
           <button class="btn btn-danger" onclick="doProtected('/api/admin', 'protected-response')">
@@ -465,6 +462,17 @@
         </div>
         <button class="btn btn-warning" onclick="doResendVerification()">Resend Email</button>
         <div class="response" id="resend-response">— response appears here —</div>
+      <!-- ── HEALTH CHECKS ── -->
+      <div class="card">
+        <h2>Health Checks <span class="endpoint-tag">GET /health/*</span></h2>
+        <p class="hint">Check server status, liveness, readiness, and database connectivity.</p>
+        <div class="btn-row">
+          <button class="btn btn-success" onclick="doHealthCheck('/health')">GET /health</button>
+          <button class="btn btn-success" onclick="doHealthCheck('/health/live')">GET /health/live</button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/ready')">GET /health/ready</button>
+          <button class="btn btn-warning" onclick="doHealthCheck('/health/db')">GET /health/db</button>
+        </div>
+        <div class="response" id="health-response">— response appears here —</div>
       </div>
 
       <!-- ── REQUEST LOG ── -->
@@ -733,6 +741,15 @@
           showResponse('resend-response', r.body, !r.ok);
         } catch (e) {
           showResponse('resend-response', String(e), true);
+        }
+      }
+
+      async function doHealthCheck(url) {
+        try {
+          const r = await apiFetch('GET', url);
+          showResponse('health-response', r.body, !r.ok);
+        } catch (e) {
+          showResponse('health-response', String(e), true);
         }
       }
     </script>
