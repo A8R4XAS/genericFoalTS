@@ -28,7 +28,8 @@ export class EmailService {
 
   constructor() {
     const port = Config.get('smtp.port', 'number', 587);
-    const secure = port === 465 || Config.get('smtp.secure', 'boolean', false);
+    const configuredSecure = Config.get('smtp.secure', 'boolean', false);
+    const secure = port === 465 || (port !== 587 && configuredSecure);
 
     this.transporter = nodemailer.createTransport({
       host: Config.get('smtp.host', 'string', 'localhost'),
