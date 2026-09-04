@@ -43,6 +43,25 @@ const envSchema = z.object({
 
   DATABASE_NAME: z.string().min(1, 'DATABASE_NAME darf nicht leer sein'),
 
+  // SMTP Configuration
+  SMTP_HOST: z.string().min(1, 'SMTP_HOST darf nicht leer sein'),
+
+  SMTP_PORT: z
+    .string()
+    .regex(/^\d+$/, 'SMTP_PORT muss eine Zahl sein')
+    .transform(Number)
+    .refine(port => port > 0 && port < 65536, {
+      message: 'SMTP_PORT muss zwischen 1 und 65535 liegen',
+    }),
+
+  SMTP_SECURE: z.string().transform(val => val === 'true'),
+
+  SMTP_USER: z.string().min(1, 'SMTP_USER darf nicht leer sein'),
+
+  SMTP_PASSWORD: z.string().min(1, 'SMTP_PASSWORD darf nicht leer sein'),
+
+  SMTP_FROM_ADDRESS: z.string().email('SMTP_FROM_ADDRESS muss eine gültige Email-Adresse sein'),
+
   // Database Connection Pool - Optional mit Defaults
   DATABASE_POOL_MAX: z.string().regex(/^\d+$/).transform(Number).optional(),
 

@@ -18,6 +18,14 @@
   "jwt": {
     "secret": "test-jwt-secret-not-for-production"
   },
+  "smtp": {
+    "host": "env(SMTP_HOST)",
+    "port": "env(SMTP_PORT)",
+    "secure": "env(SMTP_SECURE)",
+    "user": "env(SMTP_USER)",
+    "password": "env(SMTP_PASSWORD)",
+    "fromAddress": "env(SMTP_FROM_ADDRESS)"
+  },
   "bcrypt": {
     "saltRounds": 1
   }
