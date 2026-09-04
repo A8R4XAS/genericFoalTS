@@ -26,5 +26,13 @@
       "enabled": "env(DATABASE_CACHE_ENABLED)",
       "duration": "env(DATABASE_CACHE_DURATION)"
     }
+  },
+  "smtp": {
+    "host": "env(SMTP_HOST)",
+    "port": "env(SMTP_PORT)",
+    "secure": "env(SMTP_SECURE)",
+    "user": "env(SMTP_USER)",
+    "password": "env(SMTP_PASSWORD)",
+    "fromAddress": "env(SMTP_FROM_ADDRESS)"
   }
 }
