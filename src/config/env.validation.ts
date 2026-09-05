@@ -54,7 +54,7 @@ const envSchema = z.object({
       message: 'SMTP_PORT muss zwischen 1 und 65535 liegen',
     }),
 
-  SMTP_SECURE: z.string().transform(val => val === 'true'),
+  SMTP_SECURE: z.enum(['true', 'false']).transform(val => val === 'true'),
 
   SMTP_USER: z.string().min(1, 'SMTP_USER darf nicht leer sein'),
 

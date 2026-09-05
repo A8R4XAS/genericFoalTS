@@ -75,6 +75,9 @@ async function sendMail(
   if (!transporter) {
     throw new Error('SMTP transport is not configured');
   }
+  if (!fromAddress?.trim()) {
+    throw new Error('SMTP from address is not configured');
+  }
 
   const recipient = createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 16);
   const startedAt = new Date().toISOString();

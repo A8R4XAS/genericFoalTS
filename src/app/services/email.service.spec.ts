@@ -32,17 +32,22 @@ describe('EmailService', () => {
 
   it('sends mail through a reused transport', async () => {
     const messages: { to: string; text: string }[] = [];
+    let createTransportCalls = 0;
     const transport = {
       sendMail: async (message: { to: string; text: string }) => {
         messages.push(message);
       },
     };
-    nodemailer.createTransport = (() => transport) as unknown as typeof nodemailer.createTransport;
+    nodemailer.createTransport = (() => {
+      createTransportCalls++;
+      return transport;
+    }) as unknown as typeof nodemailer.createTransport;
     const service = new EmailService();
 
     await service.sendVerificationEmail('user@example.com', 'token');
     await service.sendPasswordResetEmail('user@example.com', 'reset-token');
 
+    assert.strictEqual(createTransportCalls, 1);
     assert.strictEqual(messages.length, 2);
     assert.strictEqual(messages[0].to, 'user@example.com');
     assert.match(messages[0].text, /api\/auth\/verify\/token/);
