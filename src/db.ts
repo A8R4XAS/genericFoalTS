@@ -26,7 +26,7 @@ export function createDataSource(): DataSource {
     ...(host && !url && { host }),
     ...(port && !url && { port }),
     ...(username && !url && { username }),
-    ...(password !== undefined && password !== null && !url && { password }),
+    ...(password && !url && { password }),
     ...(database && !url && { database }),
 
     // Schema-Management
