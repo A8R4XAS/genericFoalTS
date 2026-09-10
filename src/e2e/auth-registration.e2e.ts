@@ -8,10 +8,12 @@ import * as request from 'supertest';
 // App
 import { AppController } from '../app/app.controller';
 import { User } from '../app/entities';
-import { dataSource } from '../db';
+import { setupTestDatabaseE2E } from '../utils';
 
 describe('[E2E] User Registration', () => {
   let app: any;
+
+  setupTestDatabaseE2E();
 
   async function postWithCsrf(
     path: string,
@@ -28,12 +30,7 @@ describe('[E2E] User Registration', () => {
   }
 
   before(async () => {
-    await dataSource.initialize();
     app = await createApp(AppController);
-  });
-
-  after(async () => {
-    await dataSource.destroy();
   });
 
   beforeEach(async () => {

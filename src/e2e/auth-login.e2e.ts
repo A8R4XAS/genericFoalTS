@@ -9,10 +9,12 @@ import * as jwt from 'jsonwebtoken';
 // App
 import { AppController } from '../app/app.controller';
 import { User } from '../app/entities';
-import { dataSource } from '../db';
+import { setupTestDatabaseE2E } from '../utils';
 
 describe('[E2E] User Login & Token Refresh', () => {
   let app: any;
+
+  setupTestDatabaseE2E();
 
   async function getCsrfContext(): Promise<{ token: string; cookies: string[] }> {
     const response = await request(app).get('/health').expect(200);
@@ -23,12 +25,7 @@ describe('[E2E] User Login & Token Refresh', () => {
   }
 
   before(async () => {
-    await dataSource.initialize();
     app = await createApp(AppController);
-  });
-
-  after(async () => {
-    await dataSource.destroy();
   });
 
   beforeEach(async () => {
