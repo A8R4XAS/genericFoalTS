@@ -11,16 +11,23 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 export function createDataSource(): DataSource {
   const env = process.env.NODE_ENV || 'development';
 
+  const url = Config.get('database.url', 'string');
+  const password = Config.get('database.password', 'string');
+  const host = Config.get('database.host', 'string');
+  const port = Config.get('database.port', 'number');
+  const username = Config.get('database.username', 'string');
+  const database = Config.get('database.database', 'string');
+
   const options: DataSourceOptions = {
     type: Config.getOrThrow('database.type', 'string') as any,
 
     // Verbindungsparameter
-    url: Config.get('database.url', 'string'),
-    host: Config.get('database.host', 'string'),
-    port: Config.get('database.port', 'number'),
-    username: Config.get('database.username', 'string'),
-    password: Config.get('database.password', 'string'),
-    database: Config.get('database.database', 'string'),
+    ...(url && { url }),
+    ...(host && !url && { host }),
+    ...(port && !url && { port }),
+    ...(username && !url && { username }),
+    ...(password && !url && { password }),
+    ...(database && !url && { database }),
 
     // Schema-Management
     dropSchema: Config.get('database.dropSchema', 'boolean', false),
@@ -79,6 +86,8 @@ function getLoggingLevel(
     case 'development':
       return ['query', 'error', 'warn', 'migration', 'schema'];
     case 'test':
+      return ['error'];
+    case 'e2e':
       return ['error'];
     case 'production':
       return ['error', 'warn'];

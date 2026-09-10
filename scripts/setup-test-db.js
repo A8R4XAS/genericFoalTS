@@ -32,7 +32,17 @@ async function setupTestDatabases() {
       }
     }
 
-    console.log('\n✅ Test databases ready!');
+    console.log('\n✅ Test databases created!');
+    console.log('\n📝 Schema synchronization will run when tests start.');
+
+    // Schema synchronization will happen automatically when tests run
+    // since the test config has `synchronize: true`
+    console.log('✅ Database setup complete!\n');
+    console.log('ℹ️  Database configuration:');
+    console.log(`   - Test DB: ${TEST_DBS[0]}`);
+    console.log(`   - E2E DB:  ${TEST_DBS[1]}`);
+    console.log('\n💡 Note: TypeORM will synchronize schemas automatically when tests run.');
+    console.log('   Make sure NODE_ENV is set to "test" or "e2e" when running tests.\n');
   } catch (err) {
     console.error('❌ Connection failed:', err.message);
     console.error('\n⚠️  Make sure PostgreSQL is running:');
