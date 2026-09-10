@@ -21,6 +21,14 @@
     "baseUrl": "env(APP_BASE_URL)",
     "frontendBaseUrl": "env(APP_FRONTEND_BASE_URL)"
   },
+  "smtp": {
+    "host": "env(SMTP_HOST)",
+    "port": "env(SMTP_PORT)",
+    "secure": "env(SMTP_SECURE)",
+    "user": "env(SMTP_USER)",
+    "password": "env(SMTP_PASSWORD)",
+    "fromAddress": "env(SMTP_FROM_ADDRESS)"
+  },
   "rateLimit": {
     "default": {
       "points": 120,
