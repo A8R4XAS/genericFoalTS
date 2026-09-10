@@ -19,6 +19,7 @@ import {
 import { AdminController } from './admin.controller';
 import { User, UserRole } from '../entities';
 import { dataSource } from '../../db';
+import { resetDatabase } from '../../utils/test-database';
 import { RequirePermission } from '../hooks';
 
 /** Helper: create a Context with an authenticated user attached. */
@@ -40,7 +41,9 @@ describe('AdminController', () => {
   let moderatorUser: User;
 
   before(async () => {
+    console.log('Initializing data source');
     await dataSource.initialize();
+    console.log('Data source initialized');
   });
 
   after(async () => {
@@ -48,8 +51,9 @@ describe('AdminController', () => {
   });
 
   beforeEach(async () => {
+    console.log('Setting up test controller and users');
     controller = createController(AdminController);
-    await User.clear();
+    await resetDatabase();
 
     // Create admin user
     adminUser = new User();

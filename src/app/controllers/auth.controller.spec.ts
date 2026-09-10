@@ -20,6 +20,7 @@ import { randomBytes, createHash } from 'crypto';
 import { AuthController } from './auth.controller';
 import { User } from '../entities';
 import { dataSource } from '../../db';
+import { resetDatabase } from '../../utils/test-database';
 import { EmailService } from '../services';
 
 describe('AuthController', () => {
@@ -41,7 +42,7 @@ describe('AuthController', () => {
       sendPasswordResetEmail: async () => {},
     } as EmailService;
     // Clean up users table before each test
-    await User.clear();
+    await resetDatabase();
   });
 
   describe('has a "register" method that', () => {

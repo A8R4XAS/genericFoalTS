@@ -9,6 +9,7 @@ import * as jwt from 'jsonwebtoken';
 import { JwtRequired } from './jwt-required.hook';
 import { User, UserRole } from '../entities';
 import { dataSource } from '../../db';
+import { resetDatabase } from '../../utils/test-database';
 
 const JWT_SECRET = 'test-jwt-secret-not-for-production';
 
@@ -30,7 +31,7 @@ describe('JwtRequired hook', () => {
   });
 
   beforeEach(async () => {
-    await User.clear();
+    await resetDatabase();
 
     savedUser = new User();
     savedUser.email = 'hook-test@example.com';

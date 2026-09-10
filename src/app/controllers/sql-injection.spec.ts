@@ -31,6 +31,7 @@ import {
 import { AuthController } from './auth.controller';
 import { User } from '../entities';
 import { dataSource } from '../../db';
+import { resetDatabase } from '../../utils/test-database';
 import { EmailService } from '../services';
 
 /**
@@ -86,7 +87,7 @@ describe('SQL Injection Security Tests', () => {
     } as EmailService;
 
     // Start each test with an empty users table
-    await User.clear();
+    await resetDatabase();
   });
 
   // ---------------------------------------------------------------------------
