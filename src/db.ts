@@ -26,8 +26,7 @@ export function createDataSource(): DataSource {
     ...(host && !url && { host }),
     ...(port && !url && { port }),
     ...(username && !url && { username }),
-    // Only add password if it's explicitly provided (non-empty)
-    ...(password && !url && { password }),
+    ...(password !== undefined && password !== null && !url && { password }),
     ...(database && !url && { database }),
 
     // Schema-Management

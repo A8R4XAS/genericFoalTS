@@ -6,10 +6,21 @@
  */
 
 import { DataSource } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { User, UserRole } from '../app/entities';
 import { PasswordHashingService } from '../app/services';
 
 const passwordHashingService = new PasswordHashingService();
+
+function buildIndexedEmail(email: string, index: number): string {
+  const [localPart, domain] = email.split('@');
+
+  if (!domain) {
+    return `${email}-${index}`;
+  }
+
+  return `${localPart}-${index}@${domain}`;
+}
 
 /**
  * Factory interface for User creation
@@ -36,7 +47,7 @@ export async function createUser(
 ): Promise<User> {
   const user = new User();
 
-  user.email = options.email || `user-${Date.now()}@example.com`;
+  user.email = options.email || `user-${randomUUID()}@example.com`;
   user.password = options.password || 'TestPassword123';
   user.firstName = options.firstName || 'Test';
   user.lastName = options.lastName || 'User';
@@ -64,12 +75,15 @@ export async function createUsers(
   options: UserFactoryOptions = {}
 ): Promise<User[]> {
   const users: User[] = [];
+  const batchId = randomUUID();
 
   for (let i = 0; i < count; i++) {
     const user = await createUser(dataSource, {
       ...options,
       // Ensure unique emails
-      email: options.email ? `${options.email}-${i}` : `user-${Date.now()}-${i}@example.com`,
+      email: options.email
+        ? buildIndexedEmail(options.email, i)
+        : `user-${batchId}-${i}@example.com`,
     });
     users.push(user);
   }

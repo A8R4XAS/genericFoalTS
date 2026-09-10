@@ -39,19 +39,15 @@ export async function resetDatabase(): Promise<void> {
     throw new Error('DataSource not initialized. Call initializeTestDatabase first.');
   }
 
-  const entities = dataSource.entityMetadatas;
+  const tablePaths = dataSource.entityMetadatas.map(entity => {
+    const schema = entity.schema ?? 'public';
+    const escapedSchema = schema.replace(/"/g, '""');
+    const escapedTableName = entity.tableName.replace(/"/g, '""');
+    return `"${escapedSchema}"."${escapedTableName}"`;
+  });
 
-  // Disable foreign key constraints
-  await dataSource.query('SET session_replication_role = replica');
-
-  try {
-    for (const entity of entities) {
-      const repository = dataSource.getRepository(entity.name);
-      await repository.clear();
-    }
-  } finally {
-    // Re-enable foreign key constraints
-    await dataSource.query('SET session_replication_role = default');
+  if (tablePaths.length > 0) {
+    await dataSource.query(`TRUNCATE TABLE ${tablePaths.join(', ')} RESTART IDENTITY CASCADE`);
   }
 }
 

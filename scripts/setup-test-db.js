@@ -2,8 +2,6 @@
 
 require('dotenv').config();
 const { Client } = require('pg');
-const path = require('path');
-const { spawn } = require('child_process');
 
 const TEST_DBS = ['genericfoalts_test', 'genericfoalts_e2e'];
 
@@ -35,7 +33,7 @@ async function setupTestDatabases() {
     }
 
     console.log('\n✅ Test databases created!');
-    console.log('\n📝 Running schema synchronization...');
+    console.log('\n📝 Schema synchronization will run when tests start.');
 
     // Schema synchronization will happen automatically when tests run
     // since the test config has `synchronize: true`
