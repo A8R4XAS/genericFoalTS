@@ -8,7 +8,7 @@ import * as request from 'supertest';
 // App
 import { AppController } from '../app/app.controller';
 import { User } from '../app/entities';
-import { setupTestDatabaseE2E } from '../utils';
+import { setupTestDatabaseE2E, resetDatabase } from '../utils';
 
 describe('[E2E] User Registration', () => {
   let app: any;
@@ -34,8 +34,7 @@ describe('[E2E] User Registration', () => {
   });
 
   beforeEach(async () => {
-    // Clean up users table before each test
-    await User.clear();
+    await resetDatabase();
   });
 
   describe('POST /api/auth/register', () => {

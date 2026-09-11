@@ -8,8 +8,7 @@ import * as jwt from 'jsonwebtoken';
 
 // App
 import { AppController } from '../app/app.controller';
-import { User } from '../app/entities';
-import { setupTestDatabaseE2E } from '../utils';
+import { setupTestDatabaseE2E, resetDatabase } from '../utils';
 
 describe('[E2E] User Login & Token Refresh', () => {
   let app: any;
@@ -29,7 +28,7 @@ describe('[E2E] User Login & Token Refresh', () => {
   });
 
   beforeEach(async () => {
-    await User.clear();
+    await resetDatabase();
   });
 
   describe('POST /api/auth/login', () => {
