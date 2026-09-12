@@ -86,11 +86,12 @@ export function SecurityHeaders(): HookDecorator {
     const cspReportUri = sanitizeCspReportUri(rawCspReportUri);
     const rawReferrerPolicy = Config.get('security.helmet.referrerPolicy', 'string', 'no-referrer');
     const referrerPolicy = validateReferrerPolicy(rawReferrerPolicy);
-    const enforceHttpsInProduction = Config.get(
-      'security.helmet.enforceHttpsInProduction',
-      'boolean',
-      true
+    const enforceHttpsFromEnv = parseOptionalBooleanEnv(
+      process.env.SECURITY_HELMET_ENFORCE_HTTPS_IN_PRODUCTION
     );
+    const enforceHttpsInProduction =
+      enforceHttpsFromEnv ??
+      Config.get('security.helmet.enforceHttpsInProduction', 'boolean', true);
 
     const isProduction = process.env.NODE_ENV === 'production';
     // isHttps is true when the request arrived over a secure channel (TLS or trusted proxy).
@@ -222,6 +223,21 @@ function getRequestHeader(req: RequestLike, headerName: string): string | undefi
     const raw = headers[headerName.toLowerCase()];
     if (Array.isArray(raw)) return typeof raw[0] === 'string' ? raw[0] : undefined;
     if (typeof raw === 'string') return raw;
+  }
+  return undefined;
+}
+
+function parseOptionalBooleanEnv(value: string | undefined): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true') {
+    return true;
+  }
+  if (normalized === 'false') {
+    return false;
   }
   return undefined;
 }

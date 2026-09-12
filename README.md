@@ -336,6 +336,7 @@ Optionale Compose-Variablen können über eine `.env` Datei oder Shell-Variablen
 IMAGE_NAME=genericfoalts
 IMAGE_TAG=0.0.0
 APP_PORT=3001
+APP_BASE_URL=http://localhost:3001
 DATABASE_EXTERNAL_PORT=5432
 DATABASE_USERNAME=<username>
 DATABASE_PASSWORD=<password>
@@ -346,6 +347,8 @@ JWT_SECRET=your-production-secret
 Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
 wartet auf eine gesunde Datenbank, und der App-Container prüft vor `npm run migrations` zusätzlich
 direkte DB-Verbindungen mit Retries auf dem konfigurierten Datenbank-Host.
+Im Compose-Profil ist HTTPS-Redirect deaktiviert, damit der Service lokal direkt über HTTP erreichbar ist;
+für öffentliche Deployments sollte TLS über einen Reverse Proxy oder Load Balancer erzwungen werden.
 
 ### Production Build
 

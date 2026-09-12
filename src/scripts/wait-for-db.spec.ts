@@ -5,23 +5,13 @@ import {
   getConnectionHosts,
   getPositiveIntegerEnv,
   getPositiveNumberEnv,
-  parseGatewayIp,
   tryDatabaseConnection,
   waitForDatabase,
 } from './wait-for-db';
 
 describe('wait-for-db', () => {
-  it('should parse the default gateway from /proc/net/route format.', () => {
-    const routeTable = `Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\tMTU\tWindow\tIRTT
-eth0\t00000000\t010012AC\t0003\t0\t0\t0\t00000000\t0\t0\t0`;
-
-    strictEqual(parseGatewayIp(routeTable), '172.18.0.1');
-  });
-
-  it('should keep the primary host first and append the fallback only once.', () => {
+  it('should return only the configured primary host.', () => {
     strictEqual(getConnectionHosts('db').join(','), 'db');
-    strictEqual(getConnectionHosts('db', '172.18.0.1').join(','), 'db,172.18.0.1');
-    strictEqual(getConnectionHosts('db', 'db').join(','), 'db');
   });
 
   it('should return the first host that becomes reachable.', async () => {
@@ -190,6 +180,35 @@ eth0\t00000000\t010012AC\t0003\t0\t0\t0\t00000000\t0\t0\t0`;
       strictEqual((error as Error).message, 'DATABASE_PORT must be a positive integer.');
     } finally {
       delete process.env.DATABASE_PORT;
+    }
+  });
+
+  it('should reject zero for positive integer environment variables.', () => {
+    process.env.DATABASE_CONNECT_RETRIES = '0';
+
+    try {
+      getPositiveIntegerEnv('DATABASE_CONNECT_RETRIES', 30);
+      throw new Error('Expected zero validation to fail.');
+    } catch (error) {
+      strictEqual((error as Error).message, 'DATABASE_CONNECT_RETRIES must be a positive number.');
+    } finally {
+      delete process.env.DATABASE_CONNECT_RETRIES;
+    }
+  });
+
+  it('should reject negative values for positive numeric environment variables.', () => {
+    process.env.DATABASE_CONNECT_TIMEOUT_MS = '-1';
+
+    try {
+      getPositiveNumberEnv('DATABASE_CONNECT_TIMEOUT_MS', 2000);
+      throw new Error('Expected negative validation to fail.');
+    } catch (error) {
+      strictEqual(
+        (error as Error).message,
+        'DATABASE_CONNECT_TIMEOUT_MS must be a positive number.'
+      );
+    } finally {
+      delete process.env.DATABASE_CONNECT_TIMEOUT_MS;
     }
   });
 });

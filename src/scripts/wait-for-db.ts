@@ -1,4 +1,3 @@
-import { readFileSync } from 'fs';
 import { Socket } from 'net';
 
 export interface DatabaseConnectionConfig {
@@ -13,38 +12,8 @@ export interface DatabaseConnectionConfig {
 type Connector = (config: DatabaseConnectionConfig) => Promise<boolean>;
 type Sleeper = (ms: number) => Promise<void>;
 
-export function parseGatewayIp(routeTable: string): string | undefined {
-  const lines = routeTable.trim().split('\n').slice(1);
-
-  for (const line of lines) {
-    const columns = line.trim().split(/\s+/);
-    if (columns[1] !== '00000000') continue;
-
-    const gateway = columns[2];
-    if (!/^[0-9A-Fa-f]{8}$/.test(gateway)) return undefined;
-
-    const octets = gateway.match(/../g);
-    if (!octets) return undefined;
-
-    return octets
-      .reverse()
-      .map(octet => parseInt(octet, 16))
-      .join('.');
-  }
-
-  return undefined;
-}
-
-export function getGatewayIp(routeFilePath = '/proc/net/route'): string | undefined {
-  try {
-    return parseGatewayIp(readFileSync(routeFilePath, 'utf8'));
-  } catch {
-    return undefined;
-  }
-}
-
-export function getConnectionHosts(primaryHost: string, fallbackHost?: string): string[] {
-  return fallbackHost && fallbackHost !== primaryHost ? [primaryHost, fallbackHost] : [primaryHost];
+export function getConnectionHosts(primaryHost: string): string[] {
+  return [primaryHost];
 }
 
 export async function tryDatabaseConnection(

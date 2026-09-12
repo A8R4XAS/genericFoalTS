@@ -21,7 +21,7 @@ LABEL org.opencontainers.image.title="genericFoalTS"
 LABEL org.opencontainers.image.version=$APP_VERSION
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/config ./config
