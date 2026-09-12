@@ -340,12 +340,13 @@ DATABASE_EXTERNAL_PORT=5432
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_NAME=genericfoalts
-JWT_SECRET=change-me-in-production
+JWT_SECRET=your-production-secret
 ```
 
 Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
-wartet auf eine gesunde Datenbank, und der App-Container führt vor dem Start automatisch
-`npm run migrations` aus.
+wartet auf eine gesunde Datenbank, und der App-Container prüft vor `npm run migrations` zusätzlich
+direkte DB-Verbindungen mit Retries. Falls die Namensauflösung des Service-Namens im Container
+kurzzeitig noch nicht verfügbar ist, kann der Startpfad auf das erkannte Docker-Gateway ausweichen.
 
 ### Production Build
 
