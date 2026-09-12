@@ -1,6 +1,11 @@
 import { rejects, strictEqual } from 'assert';
 
-import { getConnectionHosts, parseGatewayIp, waitForDatabase } from './wait-for-db';
+import {
+  getConnectionHosts,
+  getPositiveNumberEnv,
+  parseGatewayIp,
+  waitForDatabase,
+} from './wait-for-db';
 
 describe('wait-for-db', () => {
   it('should parse the default gateway from /proc/net/route format.', () => {
@@ -67,5 +72,24 @@ eth0\t00000000\t010012AC\t0003\t0\t0\t0\t00000000\t0\t0\t0`;
       ),
       /Database is not reachable after 2 attempts\./
     );
+  });
+
+  it('should use the fallback for missing numeric environment values.', () => {
+    delete process.env.DATABASE_CONNECT_RETRIES;
+
+    strictEqual(getPositiveNumberEnv('DATABASE_CONNECT_RETRIES', 30), 30);
+  });
+
+  it('should reject invalid numeric environment values.', () => {
+    process.env.DATABASE_CONNECT_RETRIES = 'abc';
+
+    try {
+      getPositiveNumberEnv('DATABASE_CONNECT_RETRIES', 30);
+      throw new Error('Expected numeric validation to fail.');
+    } catch (error) {
+      strictEqual((error as Error).message, 'DATABASE_CONNECT_RETRIES must be a positive number.');
+    } finally {
+      delete process.env.DATABASE_CONNECT_RETRIES;
+    }
   });
 });

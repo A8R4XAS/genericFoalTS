@@ -115,7 +115,7 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
-function getPositiveNumberEnv(name: string, fallback: number): number {
+export function getPositiveNumberEnv(name: string, fallback: number): number {
   const rawValue = process.env[name];
   const value = rawValue ? Number(rawValue) : fallback;
 
