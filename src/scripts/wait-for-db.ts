@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { Client } from 'pg';
+import { Socket } from 'net';
 
 export interface DatabaseConnectionConfig {
   host: string;
@@ -48,28 +48,21 @@ export function getConnectionHosts(primaryHost: string, fallbackHost?: string): 
 }
 
 export async function tryDatabaseConnection(config: DatabaseConnectionConfig): Promise<boolean> {
-  const client = new Client({
-    host: config.host,
-    port: config.port,
-    user: config.user,
-    password: config.password,
-    database: config.database,
-    connectionTimeoutMillis: config.timeoutMs,
+  return new Promise(resolve => {
+    const socket = new Socket();
+
+    const finalize = (result: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.setTimeout(config.timeoutMs);
+    socket.once('connect', () => finalize(true));
+    socket.once('timeout', () => finalize(false));
+    socket.once('error', () => finalize(false));
+    socket.connect(config.port, config.host);
   });
-
-  try {
-    await client.connect();
-    await client.end();
-    return true;
-  } catch {
-    try {
-      await client.end();
-    } catch {
-      // Ignore cleanup errors after failed connect attempts.
-    }
-
-    return false;
-  }
 }
 
 export async function waitForDatabase(
@@ -141,7 +134,7 @@ async function main() {
   const host = await waitForDatabase(
     {
       host: getRequiredEnv('DATABASE_HOST'),
-      port: Number(getRequiredEnv('DATABASE_PORT')),
+      port: getPositiveNumberEnv('DATABASE_PORT', 5432),
       user: getRequiredEnv('DATABASE_USERNAME'),
       password: getRequiredEnv('DATABASE_PASSWORD'),
       database: getRequiredEnv('DATABASE_NAME'),
