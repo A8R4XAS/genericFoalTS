@@ -80,7 +80,7 @@ export async function waitForDatabase(
     hosts?: string[];
     connector?: Connector;
     sleeper?: Sleeper;
-    logger?: Pick<Console, 'error'>;
+    logger?: Pick<Console, 'error' | 'warn'>;
   }
 ): Promise<string> {
   const retries = options?.retries ?? 30;
@@ -95,7 +95,7 @@ export async function waitForDatabase(
       const connected = await connector({ ...config, host });
       if (connected) {
         if (host !== config.host) {
-          logger.error(
+          logger.warn(
             `Primary database host "${config.host}" unavailable. Using "${host}" instead.`
           );
         }

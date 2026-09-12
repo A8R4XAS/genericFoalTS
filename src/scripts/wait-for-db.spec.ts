@@ -37,7 +37,7 @@ eth0\t00000000\t010012AC\t0003\t0\t0\t0\t00000000\t0\t0\t0`;
           return config.host === '172.18.0.1';
         },
         sleeper: async () => undefined,
-        logger: { error: () => undefined },
+        logger: { error: () => undefined, warn: () => undefined },
       }
     );
 
@@ -62,7 +62,7 @@ eth0\t00000000\t010012AC\t0003\t0\t0\t0\t00000000\t0\t0\t0`;
           hosts: ['db'],
           connector: async () => false,
           sleeper: async () => undefined,
-          logger: { error: () => undefined },
+          logger: { error: () => undefined, warn: () => undefined },
         }
       ),
       /Database is not reachable after 2 attempts\./
