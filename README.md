@@ -28,6 +28,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
     - [Migrationen](#migrationen)
     - [Benutzer erstellen](#benutzer-erstellen)
   - [📦 Build \& Deployment](#-build--deployment)
+    - [Docker Deployment](#docker-deployment)
     - [Production Build](#production-build)
     - [Production starten](#production-starten)
   - [📁 Projektstruktur](#-projektstruktur)
@@ -311,6 +312,40 @@ node build/scripts/create-user.js
 ```
 
 ## 📦 Build & Deployment
+
+### Docker Deployment
+
+Für einfaches Deployment enthält das Projekt jetzt:
+
+- `Dockerfile` mit **Multi-Stage Build**
+- `docker-compose.yml` mit **PostgreSQL-Service**
+- automatische **Migrationen beim Container-Start**
+- **Health Checks** für App und Datenbank
+- **persistente Volumes** für PostgreSQL-Daten und Uploads
+- einfache **Image-Versionierung** über `IMAGE_NAME` und `IMAGE_TAG`
+
+Beispiel:
+
+```bash
+docker compose up --build
+```
+
+Optionale Compose-Variablen können über eine `.env` Datei oder Shell-Variablen gesetzt werden:
+
+```env
+IMAGE_NAME=genericfoalts
+IMAGE_TAG=0.0.0
+APP_PORT=3001
+DATABASE_EXTERNAL_PORT=5432
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=postgres
+DATABASE_NAME=genericfoalts
+JWT_SECRET=change-me-in-production
+```
+
+Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
+wartet auf eine gesunde Datenbank, und der App-Container führt vor dem Start automatisch
+`npm run migrations` aus.
 
 ### Production Build
 
