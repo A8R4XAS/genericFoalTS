@@ -15,13 +15,14 @@ RUN npm run build
 FROM node:22-alpine AS runner
 ARG APP_VERSION=0.0.0
 ENV NODE_ENV=production
+ENV SECURITY_HELMET_ENFORCE_HTTPS_IN_PRODUCTION=false
 WORKDIR /app
 
 LABEL org.opencontainers.image.title="genericFoalTS"
 LABEL org.opencontainers.image.version=$APP_VERSION
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts=false && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm rebuild bcrypt && npm cache clean --force
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/config ./config

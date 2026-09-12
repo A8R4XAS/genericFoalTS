@@ -1,4 +1,5 @@
-import { Socket } from 'net';
+import { readFileSync } from 'fs';
+import { isIP, Socket } from 'net';
 
 export interface DatabaseConnectionConfig {
   host: string;
@@ -13,7 +14,59 @@ type Connector = (config: DatabaseConnectionConfig) => Promise<boolean>;
 type Sleeper = (ms: number) => Promise<void>;
 
 export function getConnectionHosts(primaryHost: string): string[] {
-  return [primaryHost];
+  const hosts = [primaryHost];
+
+  if (process.env.DATABASE_ENABLE_GATEWAY_FALLBACK?.toLowerCase() !== 'true') {
+    return hosts;
+  }
+
+  if (primaryHost === 'localhost' || isIP(primaryHost) !== 0) {
+    return hosts;
+  }
+
+  const gatewayHost = getDockerGatewayHost();
+  if (gatewayHost && gatewayHost !== primaryHost) {
+    hosts.push(gatewayHost);
+  }
+
+  return hosts;
+}
+
+function getDockerGatewayHost(): string | undefined {
+  const configuredGatewayHost = process.env.DATABASE_GATEWAY_HOST?.trim();
+  if (configuredGatewayHost) {
+    return configuredGatewayHost;
+  }
+
+  try {
+    const routeTable = readFileSync('/proc/net/route', 'utf8');
+    const lines = routeTable.trim().split('\n').slice(1);
+    for (const line of lines) {
+      const columns = line.trim().split(/\s+/);
+      if (columns[1] !== '00000000') {
+        continue;
+      }
+
+      const gatewayHex = columns[2];
+      if (!gatewayHex || gatewayHex.length !== 8) {
+        continue;
+      }
+
+      const octets = gatewayHex.match(/../g);
+      if (!octets) {
+        continue;
+      }
+
+      return octets
+        .reverse()
+        .map(octet => Number.parseInt(octet, 16))
+        .join('.');
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 }
 
 export async function tryDatabaseConnection(

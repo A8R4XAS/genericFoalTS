@@ -10,8 +10,20 @@ import {
 } from './wait-for-db';
 
 describe('wait-for-db', () => {
+  afterEach(() => {
+    delete process.env.DATABASE_ENABLE_GATEWAY_FALLBACK;
+    delete process.env.DATABASE_GATEWAY_HOST;
+  });
+
   it('should return only the configured primary host.', () => {
     strictEqual(getConnectionHosts('db').join(','), 'db');
+  });
+
+  it('should include the configured gateway fallback host when enabled.', () => {
+    process.env.DATABASE_ENABLE_GATEWAY_FALLBACK = 'true';
+    process.env.DATABASE_GATEWAY_HOST = '172.18.0.1';
+
+    strictEqual(getConnectionHosts('db').join(','), 'db,172.18.0.1');
   });
 
   it('should return the first host that becomes reachable.', async () => {
