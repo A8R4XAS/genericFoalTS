@@ -20,7 +20,7 @@ export function getConnectionHosts(primaryHost: string): string[] {
     return hosts;
   }
 
-  if (primaryHost === 'localhost' || isIP(primaryHost) !== 0) {
+  if (isIP(primaryHost) !== 0) {
     return hosts;
   }
 
@@ -108,6 +108,14 @@ export async function waitForDatabase(
   const sleeper = options?.sleeper ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   const logger = options?.logger ?? console;
 
+  if (!Number.isInteger(retries) || retries <= 0) {
+    throw new Error('retries must be a positive integer.');
+  }
+
+  if (!Number.isFinite(delayMs) || delayMs <= 0) {
+    throw new Error('delayMs must be a positive number.');
+  }
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     for (const host of hosts) {
       const connected = await connector({ ...config, host });
@@ -142,7 +150,7 @@ function getRequiredEnv(name: string): string {
 
 export function getPositiveNumberEnv(name: string, fallback: number): number {
   const rawValue = process.env[name];
-  const value = rawValue ? Number(rawValue) : fallback;
+  const value = rawValue === undefined ? fallback : Number(rawValue);
 
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${name} must be a positive number.`);

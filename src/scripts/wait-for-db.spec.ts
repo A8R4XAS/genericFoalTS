@@ -26,6 +26,13 @@ describe('wait-for-db', () => {
     strictEqual(getConnectionHosts('db').join(','), 'db,172.18.0.1');
   });
 
+  it('should keep only the primary host when it is already an IP address.', () => {
+    process.env.DATABASE_ENABLE_GATEWAY_FALLBACK = 'true';
+    process.env.DATABASE_GATEWAY_HOST = '172.18.0.1';
+
+    strictEqual(getConnectionHosts('127.0.0.1').join(','), '127.0.0.1');
+  });
+
   it('should return the first host that becomes reachable.', async () => {
     const calls: string[] = [];
 
@@ -163,6 +170,30 @@ describe('wait-for-db', () => {
     );
   });
 
+  it('should reject non-positive retry counts.', async () => {
+    await rejects(
+      waitForDatabase(
+        {
+          host: 'db',
+          port: 5432,
+          user: 'postgres',
+          password: 'postgres',
+          database: 'genericfoalts',
+          timeoutMs: 100,
+        },
+        {
+          retries: 0,
+          delayMs: 1,
+          hosts: ['db'],
+          connector: async () => false,
+          sleeper: async () => undefined,
+          logger: { error: () => undefined, warn: () => undefined },
+        }
+      ),
+      /retries must be a positive integer\./
+    );
+  });
+
   it('should use the fallback for missing numeric environment values.', () => {
     delete process.env.DATABASE_CONNECT_RETRIES;
 
@@ -190,6 +221,19 @@ describe('wait-for-db', () => {
       throw new Error('Expected integer validation to fail.');
     } catch (error) {
       strictEqual((error as Error).message, 'DATABASE_PORT must be a positive integer.');
+    } finally {
+      delete process.env.DATABASE_PORT;
+    }
+  });
+
+  it('should reject empty values for positive integer environment variables.', () => {
+    process.env.DATABASE_PORT = '';
+
+    try {
+      getPositiveIntegerEnv('DATABASE_PORT', 5432);
+      throw new Error('Expected empty value validation to fail.');
+    } catch (error) {
+      strictEqual((error as Error).message, 'DATABASE_PORT must be a positive number.');
     } finally {
       delete process.env.DATABASE_PORT;
     }

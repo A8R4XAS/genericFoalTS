@@ -346,7 +346,8 @@ JWT_SECRET=your-production-secret
 
 Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
 wartet auf eine gesunde Datenbank, und der App-Container prüft vor `npm run migrations` zusätzlich
-direkte DB-Verbindungen mit Retries auf dem konfigurierten Datenbank-Host.
+direkte DB-Verbindungen mit Retries auf dem konfigurierten Datenbank-Host (optional inklusive Gateway-Fallback,
+wenn `DATABASE_ENABLE_GATEWAY_FALLBACK=true` gesetzt ist).
 Im Compose-Profil ist HTTPS-Redirect deaktiviert, damit der Service lokal direkt über HTTP erreichbar ist;
 für öffentliche Deployments sollte TLS über einen Reverse Proxy oder Load Balancer erzwungen werden.
 
