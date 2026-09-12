@@ -55,8 +55,8 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const baseUrl = Config.get('app.frontendBaseUrl', 'string', 'http://localhost:3000');
-    const resetUrl = `${baseUrl}/reset-password/${token}`;
+    const baseUrl = Config.get('app.baseUrl', 'string', 'http://localhost:3001');
+    const resetUrl = `${baseUrl}/reset-password.html?token=${encodeURIComponent(token)}`;
 
     // Do not log the reset URL as it contains a valid credential.
     await sendMail(this.transporter, this.fromAddress, email, {

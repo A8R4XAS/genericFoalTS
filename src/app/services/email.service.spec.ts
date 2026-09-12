@@ -51,7 +51,7 @@ describe('EmailService', () => {
     assert.strictEqual(messages.length, 2);
     assert.strictEqual(messages[0].to, 'user@example.com');
     assert.match(messages[0].text, /api\/auth\/verify\/token/);
-    assert.match(messages[1].text, /reset-password\/reset-token/);
+    assert.match(messages[1].text, /reset-password\.html\?token=reset-token/);
   });
 
   it('retries transient failures and eventually succeeds', async () => {
