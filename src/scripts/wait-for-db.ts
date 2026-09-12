@@ -122,10 +122,21 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function getPositiveNumberEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  const value = rawValue ? Number(rawValue) : fallback;
+
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${name} must be a positive number.`);
+  }
+
+  return value;
+}
+
 async function main() {
-  const retries = Number(process.env.DATABASE_CONNECT_RETRIES || 30);
-  const delayMs = Number(process.env.DATABASE_CONNECT_DELAY || 2) * 1000;
-  const timeoutMs = Number(process.env.DATABASE_CONNECT_TIMEOUT_MS || 2000);
+  const retries = getPositiveNumberEnv('DATABASE_CONNECT_RETRIES', 30);
+  const delayMs = getPositiveNumberEnv('DATABASE_CONNECT_DELAY', 2) * 1000;
+  const timeoutMs = getPositiveNumberEnv('DATABASE_CONNECT_TIMEOUT_MS', 2000);
 
   const host = await waitForDatabase(
     {
