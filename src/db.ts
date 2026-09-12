@@ -58,7 +58,9 @@ export function createDataSource(): DataSource {
 
     // SSL für Produktion (falls benötigt)
     ssl: Config.get('database.ssl', 'boolean', false)
-      ? { rejectUnauthorized: Config.get('database.ssl.rejectUnauthorized', 'boolean', false) }
+      ? {
+          rejectUnauthorized: Config.get('database.extra.ssl.rejectUnauthorized', 'boolean', false),
+        }
       : false,
 
     // Cache-Konfiguration (optional)

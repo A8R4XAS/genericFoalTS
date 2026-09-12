@@ -34,5 +34,10 @@
     "user": "env(SMTP_USER)",
     "password": "env(SMTP_PASSWORD)",
     "fromAddress": "env(SMTP_FROM_ADDRESS)"
+  },
+  "security": {
+    "helmet": {
+      "enforceHttpsInProduction": false
+    }
   }
 }

@@ -3,7 +3,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci
 
 FROM deps AS builder
 COPY tsconfig*.json ./
@@ -21,7 +21,7 @@ LABEL org.opencontainers.image.title="genericFoalTS"
 LABEL org.opencontainers.image.version=$APP_VERSION
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/config ./config
@@ -34,6 +34,6 @@ USER node
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3001) + '/health/ready', { redirect: 'manual', headers: { 'x-forwarded-proto': 'https' } }).then(response => process.exit(response.status < 400 ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3001) + '/health/ready', { redirect: 'manual' }).then(response => process.exit(response.status === 200 ? 0 : 1)).catch(() => process.exit(1))"
 
 CMD ["./docker-entrypoint.sh"]

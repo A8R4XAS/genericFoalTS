@@ -47,9 +47,12 @@ export function getConnectionHosts(primaryHost: string, fallbackHost?: string): 
   return fallbackHost && fallbackHost !== primaryHost ? [primaryHost, fallbackHost] : [primaryHost];
 }
 
-export async function tryDatabaseConnection(config: DatabaseConnectionConfig): Promise<boolean> {
+export async function tryDatabaseConnection(
+  config: DatabaseConnectionConfig,
+  socketFactory: () => Socket = () => new Socket()
+): Promise<boolean> {
   return new Promise(resolve => {
-    const socket = new Socket();
+    const socket = socketFactory();
 
     const finalize = (result: boolean) => {
       socket.removeAllListeners();
@@ -78,7 +81,7 @@ export async function waitForDatabase(
 ): Promise<string> {
   const retries = options?.retries ?? 30;
   const delayMs = options?.delayMs ?? 2000;
-  const hosts = options?.hosts ?? getConnectionHosts(config.host, getGatewayIp());
+  const hosts = options?.hosts ?? getConnectionHosts(config.host);
   const connector = options?.connector ?? tryDatabaseConnection;
   const sleeper = options?.sleeper ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
   const logger = options?.logger ?? console;
@@ -126,15 +129,25 @@ export function getPositiveNumberEnv(name: string, fallback: number): number {
   return value;
 }
 
+export function getPositiveIntegerEnv(name: string, fallback: number): number {
+  const value = getPositiveNumberEnv(name, fallback);
+
+  if (!Number.isInteger(value)) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return value;
+}
+
 async function main() {
-  const retries = getPositiveNumberEnv('DATABASE_CONNECT_RETRIES', 30);
+  const retries = getPositiveIntegerEnv('DATABASE_CONNECT_RETRIES', 30);
   const delayMs = getPositiveNumberEnv('DATABASE_CONNECT_DELAY', 2) * 1000;
   const timeoutMs = getPositiveNumberEnv('DATABASE_CONNECT_TIMEOUT_MS', 2000);
 
   const host = await waitForDatabase(
     {
       host: getRequiredEnv('DATABASE_HOST'),
-      port: getPositiveNumberEnv('DATABASE_PORT', 5432),
+      port: getPositiveIntegerEnv('DATABASE_PORT', 5432),
       user: getRequiredEnv('DATABASE_USERNAME'),
       password: getRequiredEnv('DATABASE_PASSWORD'),
       database: getRequiredEnv('DATABASE_NAME'),

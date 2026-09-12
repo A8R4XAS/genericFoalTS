@@ -327,7 +327,7 @@ Für einfaches Deployment enthält das Projekt jetzt:
 Beispiel:
 
 ```bash
-docker compose up --build
+JWT_SECRET=your-production-secret DATABASE_PASSWORD=your-db-password docker compose up --build
 ```
 
 Optionale Compose-Variablen können über eine `.env` Datei oder Shell-Variablen gesetzt werden:
@@ -345,8 +345,7 @@ JWT_SECRET=your-production-secret
 
 Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
 wartet auf eine gesunde Datenbank, und der App-Container prüft vor `npm run migrations` zusätzlich
-direkte DB-Verbindungen mit Retries. Falls die Namensauflösung des Service-Namens im Container
-kurzzeitig noch nicht verfügbar ist, kann der Startpfad auf das erkannte Docker-Gateway ausweichen.
+direkte DB-Verbindungen mit Retries auf dem konfigurierten Datenbank-Host.
 
 ### Production Build
 

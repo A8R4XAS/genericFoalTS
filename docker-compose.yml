@@ -19,7 +19,7 @@ services:
       DATABASE_HOST: db
       DATABASE_PORT: 5432
       DATABASE_USERNAME: ${DATABASE_USERNAME:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
       DATABASE_NAME: ${DATABASE_NAME:-genericfoalts}
       DATABASE_SSL: ${DATABASE_SSL:-false}
       DATABASE_SSL_REJECT_UNAUTHORIZED: ${DATABASE_SSL_REJECT_UNAUTHORIZED:-false}
@@ -30,7 +30,7 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-docker}
       SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-noreply@example.com}
     ports:
-      - "${APP_PORT:-3001}:3001"
+      - '${APP_PORT:-3001}:3001'
     restart: unless-stopped
     volumes:
       - app-storage:/app/storage
@@ -39,7 +39,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:' + (process.env.PORT || 3001) + '/health/ready', { redirect: 'manual', headers: { 'x-forwarded-proto': 'https' } }).then(response => process.exit(response.status < 400 ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://127.0.0.1:' + (process.env.PORT || 3001) + '/health/ready', { redirect: 'manual' }).then(response => process.exit(response.status === 200 ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 5
@@ -50,17 +50,17 @@ services:
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-genericfoalts}
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
     healthcheck:
       test:
         - CMD-SHELL
-        - "pg_isready -U ${DATABASE_USERNAME:-postgres} -d ${DATABASE_NAME:-genericfoalts}"
+        - 'pg_isready -U ${DATABASE_USERNAME:-postgres} -d ${DATABASE_NAME:-genericfoalts}'
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     ports:
-      - "127.0.0.1:${DATABASE_EXTERNAL_PORT:-5432}:5432"
+      - '127.0.0.1:${DATABASE_EXTERNAL_PORT:-5432}:5432'
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
