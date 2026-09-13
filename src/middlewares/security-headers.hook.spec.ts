@@ -35,6 +35,7 @@ function makeContext(overrides: Record<string, unknown> = {}): Context {
 describe('SecurityHeaders hook', () => {
   let originalGet: typeof Config.get;
   let originalNodeEnv: string | undefined;
+  let originalEnforceHttpsEnv: string | undefined;
 
   function mockConfig(overrides: Record<string, unknown>): void {
     Config.get = (key: string, type?: any, defaultValue?: any) => {
@@ -60,12 +61,14 @@ describe('SecurityHeaders hook', () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     originalGet = Config.get;
     originalNodeEnv = process.env.NODE_ENV;
+    originalEnforceHttpsEnv = process.env.SECURITY_HELMET_ENFORCE_HTTPS_IN_PRODUCTION;
     process.env.NODE_ENV = 'development';
   });
 
   afterEach(() => {
     Config.get = originalGet;
     process.env.NODE_ENV = originalNodeEnv;
+    process.env.SECURITY_HELMET_ENFORCE_HTTPS_IN_PRODUCTION = originalEnforceHttpsEnv;
   });
 
   it('should apply security headers including CSP, frameguard, noSniff and referrer policy.', () => {
@@ -202,6 +205,27 @@ describe('SecurityHeaders hook', () => {
     );
 
     // Should fall through to the post-hook function, not return a redirect.
+    strictEqual(typeof result, 'function');
+  });
+
+  it('should allow overriding HTTPS enforcement through environment variables.', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.SECURITY_HELMET_ENFORCE_HTTPS_IN_PRODUCTION = 'false';
+    mockConfig({
+      'security.helmet.enforceHttpsInProduction': true,
+      'app.baseUrl': 'https://api.example.com',
+    });
+
+    const hookFn = getHookFunction(SecurityHeaders());
+    const result = hookFn(
+      makeContext({
+        secure: false,
+        url: '/api/profile?tab=security',
+        originalUrl: '/api/profile?tab=security',
+      }),
+      makeServices()
+    );
+
     strictEqual(typeof result, 'function');
   });
 });

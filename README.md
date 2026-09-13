@@ -28,6 +28,7 @@ Ein generisches Backend-Projekt basierend auf [FoalTS](https://foalts.org/) - ei
     - [Migrationen](#migrationen)
     - [Benutzer erstellen](#benutzer-erstellen)
   - [📦 Build \& Deployment](#-build--deployment)
+    - [Docker Deployment](#docker-deployment)
     - [Production Build](#production-build)
     - [Production starten](#production-starten)
   - [📁 Projektstruktur](#-projektstruktur)
@@ -311,6 +312,44 @@ node build/scripts/create-user.js
 ```
 
 ## 📦 Build & Deployment
+
+### Docker Deployment
+
+Für einfaches Deployment enthält das Projekt jetzt:
+
+- `Dockerfile` mit **Multi-Stage Build**
+- `docker-compose.yml` mit **PostgreSQL-Service**
+- automatische **Migrationen beim Container-Start**
+- **Health Checks** für App und Datenbank
+- **persistente Volumes** für PostgreSQL-Daten und Uploads
+- einfache **Image-Versionierung** über `IMAGE_NAME` und `IMAGE_TAG`
+
+Beispiel:
+
+```bash
+JWT_SECRET=your-production-secret DATABASE_PASSWORD=your-db-password docker compose up --build
+```
+
+Optionale Compose-Variablen können über eine `.env` Datei oder Shell-Variablen gesetzt werden:
+
+```env
+IMAGE_NAME=genericfoalts
+IMAGE_TAG=0.0.0
+APP_PORT=3001
+APP_BASE_URL=http://localhost:3001
+DATABASE_EXTERNAL_PORT=5432
+DATABASE_USERNAME=<username>
+DATABASE_PASSWORD=<password>
+DATABASE_NAME=<name>
+JWT_SECRET=your-production-secret
+```
+
+Die Anwendung ist danach unter `http://localhost:3001` erreichbar. Die Container-Startreihenfolge
+wartet auf eine gesunde Datenbank, und der App-Container prüft vor `npm run migrations` zusätzlich
+direkte DB-Verbindungen mit Retries auf dem konfigurierten Datenbank-Host (optional inklusive Gateway-Fallback,
+wenn `DATABASE_ENABLE_GATEWAY_FALLBACK=true` gesetzt ist).
+Im Compose-Profil ist HTTPS-Redirect deaktiviert, damit der Service lokal direkt über HTTP erreichbar ist;
+für öffentliche Deployments sollte TLS über einen Reverse Proxy oder Load Balancer erzwungen werden.
 
 ### Production Build
 

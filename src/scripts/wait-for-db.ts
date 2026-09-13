@@ -1,0 +1,197 @@
+import { readFileSync } from 'fs';
+import { isIP, Socket } from 'net';
+
+export interface DatabaseConnectionConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+  timeoutMs: number;
+}
+
+type Connector = (config: DatabaseConnectionConfig) => Promise<boolean>;
+type Sleeper = (ms: number) => Promise<void>;
+
+export function getConnectionHosts(primaryHost: string): string[] {
+  const hosts = [primaryHost];
+
+  if (process.env.DATABASE_ENABLE_GATEWAY_FALLBACK?.toLowerCase() !== 'true') {
+    return hosts;
+  }
+
+  if (isIP(primaryHost) !== 0) {
+    return hosts;
+  }
+
+  const gatewayHost = getDockerGatewayHost();
+  if (gatewayHost && gatewayHost !== primaryHost) {
+    hosts.push(gatewayHost);
+  }
+
+  return hosts;
+}
+
+function getDockerGatewayHost(): string | undefined {
+  const configuredGatewayHost = process.env.DATABASE_GATEWAY_HOST?.trim();
+  if (configuredGatewayHost) {
+    return configuredGatewayHost;
+  }
+
+  try {
+    const routeTable = readFileSync('/proc/net/route', 'utf8');
+    const lines = routeTable.trim().split('\n').slice(1);
+    for (const line of lines) {
+      const columns = line.trim().split(/\s+/);
+      if (columns[1] !== '00000000') {
+        continue;
+      }
+
+      const gatewayHex = columns[2];
+      if (!gatewayHex || gatewayHex.length !== 8) {
+        continue;
+      }
+
+      const octets = gatewayHex.match(/../g);
+      if (!octets) {
+        continue;
+      }
+
+      return octets
+        .reverse()
+        .map(octet => Number.parseInt(octet, 16))
+        .join('.');
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+export async function tryDatabaseConnection(
+  config: DatabaseConnectionConfig,
+  socketFactory: () => Socket = () => new Socket()
+): Promise<boolean> {
+  return new Promise(resolve => {
+    const socket = socketFactory();
+
+    const finalize = (result: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.setTimeout(config.timeoutMs);
+    socket.once('connect', () => finalize(true));
+    socket.once('timeout', () => finalize(false));
+    socket.once('error', () => finalize(false));
+    socket.connect(config.port, config.host);
+  });
+}
+
+export async function waitForDatabase(
+  config: DatabaseConnectionConfig,
+  options?: {
+    retries?: number;
+    delayMs?: number;
+    hosts?: string[];
+    connector?: Connector;
+    sleeper?: Sleeper;
+    logger?: Pick<Console, 'error' | 'warn'>;
+  }
+): Promise<string> {
+  const retries = options?.retries ?? 30;
+  const delayMs = options?.delayMs ?? 2000;
+  const hosts = options?.hosts ?? getConnectionHosts(config.host);
+  const connector = options?.connector ?? tryDatabaseConnection;
+  const sleeper = options?.sleeper ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+  const logger = options?.logger ?? console;
+
+  if (!Number.isInteger(retries) || retries <= 0) {
+    throw new Error('retries must be a positive integer.');
+  }
+
+  if (!Number.isFinite(delayMs) || delayMs <= 0) {
+    throw new Error('delayMs must be a positive number.');
+  }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    for (const host of hosts) {
+      const connected = await connector({ ...config, host });
+      if (connected) {
+        if (host !== config.host) {
+          logger.warn(
+            `Primary database host "${config.host}" unavailable. Using "${host}" instead.`
+          );
+        }
+
+        return host;
+      }
+    }
+
+    if (attempt < retries) {
+      logger.error(`Waiting for database connection (${attempt}/${retries})...`);
+      await sleeper(delayMs);
+    }
+  }
+
+  throw new Error(`Database is not reachable after ${retries} attempts.`);
+}
+
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+export function getPositiveNumberEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  const value = rawValue === undefined ? fallback : Number(rawValue);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${name} must be a positive number.`);
+  }
+
+  return value;
+}
+
+export function getPositiveIntegerEnv(name: string, fallback: number): number {
+  const value = getPositiveNumberEnv(name, fallback);
+
+  if (!Number.isInteger(value)) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return value;
+}
+
+async function main() {
+  const retries = getPositiveIntegerEnv('DATABASE_CONNECT_RETRIES', 30);
+  const delayMs = getPositiveNumberEnv('DATABASE_CONNECT_DELAY', 2) * 1000;
+  const timeoutMs = getPositiveNumberEnv('DATABASE_CONNECT_TIMEOUT_MS', 2000);
+
+  const host = await waitForDatabase(
+    {
+      host: getRequiredEnv('DATABASE_HOST'),
+      port: getPositiveIntegerEnv('DATABASE_PORT', 5432),
+      user: getRequiredEnv('DATABASE_USERNAME'),
+      password: getRequiredEnv('DATABASE_PASSWORD'),
+      database: getRequiredEnv('DATABASE_NAME'),
+      timeoutMs,
+    },
+    { retries, delayMs }
+  );
+
+  process.stdout.write(host);
+}
+
+if (require.main === module) {
+  main().catch((error: Error) => {
+    console.error(error.message);
+    process.exit(1);
+  });
+}
